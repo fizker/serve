@@ -1,0 +1,21 @@
+{
+  "name": "@fizker/serve",
+  "version": "1.0.0",
+  "description": "A static file HTTP server",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "flow-bin": "^0.113.0",
+    "mocha": "^6.2.2"
+  },
+  "keywords": [
+    "http",
+    "serve",
+    "static"
+  ],
+  "author": "Benjamin Horsleben",
+  "license": "WTFPL"
+}
