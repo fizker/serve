@@ -9,7 +9,9 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "flow-bin": "^0.113.0",
-    "mocha": "^6.2.2"
+    "flow-typed": "^2.6.2",
+    "mocha": "^6.2.2",
+    "node-fetch": "^2.6.0"
   },
   "keywords": [
     "http",
