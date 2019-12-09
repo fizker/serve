@@ -19,4 +19,5 @@ module.exports = {
 
 afterEach(async () => {
 	await Promise.all(servers.map(x => x.close()))
+	servers = []
 })

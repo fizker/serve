@@ -55,11 +55,12 @@ declare module 'node-fetch' {
   declare export class Headers {
     append(name: string, value: string): void;
     delete(name: string): void;
+    entries(): Iterator<[string, string]>;
     forEach(callback: (value: string, name: string) => void): void;
     get(name: string): string;
     getAll(name: string): Array<string>;
     has(name: string): boolean;
-    raw(): { [k: string]: string[], ... };
+    keys(): Iterator<string>;
     set(name: string, value: string): void;
   }
 

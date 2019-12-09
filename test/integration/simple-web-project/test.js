@@ -7,7 +7,7 @@ const { it, describe, beforeEach } = require("mocha")
 const { expect } = require("chai")
 
 /*::
-import { Response } from "node-fetch"
+import { Response, Headers } from "node-fetch"
 */
 
 function unwrap/*::<T>*/(t/*:?T*/) /*: T*/ {
@@ -15,6 +15,10 @@ function unwrap/*::<T>*/(t/*:?T*/) /*: T*/ {
 		throw new Error("Found null")
 	}
 	return t
+}
+
+function getHeaders(headers /*: Headers*/) /*: {[string]: string, ...}*/ {
+	return Object.fromEntries(headers.entries())
 }
 
 describe("integration/simple-web-project/test.js", () => {
@@ -36,11 +40,11 @@ describe("integration/simple-web-project/test.js", () => {
 			})
 			it("should have status code 200", () => {
 				expect(testData.response)
-					.to.have.property("statusCode", 200)
+					.to.have.property("status", 200)
 			})
 			it("should have proper mime-type", () => {
-				expect(unwrap(testData.response).headers)
-					.to.have.property("Content-Type", "application/javascript")
+				expect(getHeaders(unwrap(testData.response).headers))
+					.to.have.property("content-type", "application/javascript")
 			})
 			it("should return uncompressed file", async () => {
 				expect(await unwrap(testData.response).text())

@@ -1,4 +1,7 @@
 // @flow strict
+
+const path = require("path")
+
 /*::
 import type { ServerSetup } from "../../../src/server"
 */
@@ -6,14 +9,14 @@ import type { ServerSetup } from "../../../src/server"
 module.exports = ({
 	"aliases": [],
 	"folders": {
-		"uncompressed": "files",
-		"deflate": "deflate",
-		"gzip": "gzip",
-		"brotli": "brotli",
+		"uncompressed": path.join(__dirname, "./", "files"),
+		"deflate": path.join(__dirname, "./", "deflate"),
+		"gzip": path.join(__dirname, "./", "gzip"),
+		"brotli": path.join(__dirname, "./", "brotli"),
 	},
 	"files": [
 		{
-			"path": "file.js",
+			"path": "/file.js",
 			"mime": "application/javascript",
 			"statusCode": 200,
 			"sizes": {
@@ -25,7 +28,7 @@ module.exports = ({
 			"headers": {},
 		},
 		{
-			"path": "uncompressable.txt",
+			"path": "/uncompressable.txt",
 			"mime": "text/plain",
 			"statusCode": 200,
 			"sizes": {
@@ -38,7 +41,7 @@ module.exports = ({
 		}
 	],
 	"catchAllFile": {
-		"path": "catchall.html",
+		"path": "/catchall.html",
 		"mime": "text/html",
 		"statusCode": 200,
 		"sizes": {
