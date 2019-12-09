@@ -27,7 +27,8 @@ describe("integration/simple-web-project/test.js", () => {
 		testData = {
 			base: await server.start(setup),
 			encodings: [],
-			response: (null/*:?Response*/),
+			response: (null /*:?Response*/),
+			headers: (null /*:?{[string]: string, ...}*/),
 		}
 	})
 	describe("not accepting any encodings", () => {
@@ -36,26 +37,72 @@ describe("integration/simple-web-project/test.js", () => {
 		})
 		describe("asking for js file", () => {
 			beforeEach(async () => {
-				testData.response = await fetch("/file.js", testData)
+				const response = await fetch("/file.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
 			})
 			it("should have status code 200", () => {
 				expect(testData.response)
 					.to.have.property("status", 200)
 			})
 			it("should have proper mime-type", () => {
-				expect(getHeaders(unwrap(testData.response).headers))
+				expect(testData.headers)
 					.to.have.property("content-type", "application/javascript")
 			})
-			it("should return uncompressed file", async () => {
-				expect(await unwrap(testData.response).text())
-					.to.equal("'normal'\n")
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "36")
 			})
 		})
 		describe("asking for non-existing file", () => {
-			it("should return uncompressed catchall")
+			beforeEach(async () => {
+				const response = await fetch("/non-existing.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/html")
+			})
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "89")
+			})
 		})
 		describe("asking for uncompressable", () => {
-			it("should return uncompressed file")
+			beforeEach(async () => {
+				const response = await fetch("/uncompressable.txt", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/plain")
+			})
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "11")
+			})
 		})
 	})
 	describe("accepting deflate", () => {
@@ -63,13 +110,73 @@ describe("integration/simple-web-project/test.js", () => {
 			testData.encodings = [ "deflate" ]
 		})
 		describe("asking for js file", () => {
-			it("should return deflate file")
+			beforeEach(async () => {
+				const response = await fetch("/file.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "application/javascript")
+			})
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.have.property("content-encoding", "deflate")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "35")
+			})
 		})
 		describe("asking for non-existing file", () => {
-			it("should return uncompressed catchall")
+			beforeEach(async () => {
+				const response = await fetch("/non-existing.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/html")
+			})
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "89")
+			})
 		})
 		describe("asking for uncompressable", () => {
-			it("should return uncompressed file")
+			beforeEach(async () => {
+				const response = await fetch("/uncompressable.txt", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/plain")
+			})
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "11")
+			})
 		})
 	})
 	describe("accepting gzip and deflate", () => {
@@ -77,13 +184,73 @@ describe("integration/simple-web-project/test.js", () => {
 			testData.encodings = [ "deflate", "gzip" ]
 		})
 		describe("asking for js file", () => {
-			it("should return gzip file because it is smallest")
+			beforeEach(async () => {
+				const response = await fetch("/file.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "application/javascript")
+			})
+			it("should compress to gzip, which is smallest", () => {
+				expect(testData.headers)
+					.to.have.property("content-encoding", "gzip")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "32")
+			})
 		})
 		describe("asking for non-existing file", () => {
-			it("should return catchall as gzip")
+			beforeEach(async () => {
+				const response = await fetch("/non-existing.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/html")
+			})
+			it("should gzip the file", () => {
+				expect(testData.headers)
+					.to.have.property("content-encoding", "gzip")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "81")
+			})
 		})
 		describe("asking for uncompressable", () => {
-			it("should return uncompressed file because it is smallest")
+			beforeEach(async () => {
+				const response = await fetch("/uncompressable.txt", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/plain")
+			})
+			it("should not compress the file because it is smallest", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "11")
+			})
 		})
 	})
 })

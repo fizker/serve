@@ -1,3 +1,4 @@
+--exclude test/integration/simple-web-project/*/file.js
 --recursive
 --reporter  dot
 --ui bdd

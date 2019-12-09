@@ -48,7 +48,7 @@ module.exports = class Server {
 	constructor(setup/*: ServerSetup*/) {
 		this.#setup = setup
 		this.#server = http.createServer((req, res) => {
-			const acceptedEncodings = parseEncodingHeader(req.headers["Accept-Encoding"])
+			const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
 			const parsedURL = url.parse(req.url)
 			const pathname = parsedURL.pathname
@@ -69,6 +69,8 @@ module.exports = class Server {
 						: x.name
 				})
 				const encoding = encodingNames.find(x => file.sizes[x] != null) || "uncompressed"
+
+				res.setHeader("content-length", file.sizes[encoding])
 
 				sendFile(res, file, this.#setup.folders[encoding])
 			}
