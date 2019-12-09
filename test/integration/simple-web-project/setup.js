@@ -9,7 +9,7 @@ import type { ServerSetup } from "../../../src/server"
 module.exports = ({
 	"aliases": [],
 	"folders": {
-		"uncompressed": path.join(__dirname, "./", "files"),
+		"identity": path.join(__dirname, "./", "files"),
 		"deflate": path.join(__dirname, "./", "deflate"),
 		"gzip": path.join(__dirname, "./", "gzip"),
 		"brotli": path.join(__dirname, "./", "brotli"),
@@ -20,7 +20,7 @@ module.exports = ({
 			"mime": "application/javascript",
 			"statusCode": 200,
 			"sizes": {
-				"uncompressed": 36,
+				"identity": 36,
 				"deflate": 35,
 				"gzip": 32,
 				"brotli": null,
@@ -32,7 +32,7 @@ module.exports = ({
 			"mime": "text/plain",
 			"statusCode": 200,
 			"sizes": {
-				"uncompressed": 11,
+				"identity": 11,
 				"gzip": 31,
 				"deflate": 19,
 				"brotli": null,
@@ -45,7 +45,7 @@ module.exports = ({
 		"mime": "text/html",
 		"statusCode": 200,
 		"sizes": {
-			"uncompressed": 89,
+			"identity": 89,
 			"gzip": 81,
 			"deflate": null,
 			"brotli": null,

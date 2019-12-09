@@ -14,7 +14,7 @@ export type File = {
 	path: string,
 	mime: string,
 	sizes: {
-		uncompressed: number,
+		identity: number,
 		deflate: ?number,
 		gzip: ?number,
 		brotli: ?number,
@@ -31,7 +31,7 @@ export type ServerSetup = {
 		to: string,
 	}>,
 	folders: {
-		uncompressed: string,
+		identity: string,
 		deflate: string,
 		gzip: string,
 		brotli: string,
@@ -60,19 +60,35 @@ module.exports = class Server {
 
 			if(file == null) {
 				res.statusCode = 404
+				res.setHeader("content-length", "10")
 				res.setHeader("Content-Type", "text/plain")
-				res.end("Not found")
+				res.end("Not found\n")
 			} else {
-				const encodingNames = acceptedEncodings.map(x => {
-					return x.name === "identity"
-						? "uncompressed"
-						: x.name
+				const matchingEncodings = acceptedEncodings
+				.map(x => {
+					const size = file.sizes[x.name]
+					if(size == null) {
+						return null
+					} else {
+						return {
+							...x,
+							size,
+						}
+					}
 				})
-				const encoding = encodingNames.find(x => file.sizes[x] != null) || "uncompressed"
+				.filter(Boolean)
+				.sort((a, b) => a.size - b.size)
+				const smallestEncoding = matchingEncodings[0]
 
-				res.setHeader("content-length", file.sizes[encoding])
+				res.statusCode = file.statusCode
+				res.setHeader("content-length", smallestEncoding.size.toString())
+				res.setHeader("content-type", file.mime)
+				if(smallestEncoding.name !== "identity") {
+					res.setHeader("content-encoding", smallestEncoding.name)
+				}
 
-				sendFile(res, file, this.#setup.folders[encoding])
+				const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)
+				fs.createReadStream(filepath).pipe(res)
 			}
 		})
 	}
@@ -87,12 +103,4 @@ module.exports = class Server {
 			this.#server.close((err) => { err ? rej(err) : res() })
 		})
 	}
-}
-
-function sendFile(res/*: ServerResponse*/, file/*: File*/, root/*: ?string*/) /*: void*/ {
-	res.statusCode = file.statusCode
-	res.setHeader("Content-Type", file.mime)
-
-	const filepath = root == null ? file.path : path.join(root, file.path)
-	fs.createReadStream(filepath).pipe(res)
 }
