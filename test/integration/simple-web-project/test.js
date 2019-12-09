@@ -281,4 +281,32 @@ describe("integration/simple-web-project/test.js", () => {
 			})
 		})
 	})
+	describe("accepting brotli least, gzip most and deflate in the middle", () => {
+		beforeEach(() => {
+			testData.encodings = [ { name: "brotli", weight: 0.2 }, { name: "deflate", weight: 0.5 }, { name: "gzip", weight: 1 } ]
+		})
+		describe("asking for js file", () => {
+			beforeEach(async () => {
+				const response = await fetch("/file.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "application/javascript")
+			})
+			it("should compress to gzip", () => {
+				expect(testData.headers)
+					.to.have.property("content-encoding", "gzip")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "32")
+			})
+		})
+	})
 })

@@ -8,12 +8,12 @@ export type Encoding = {
 */
 
 const allEncodings = [
-	"deflate", "gzip"
+	"brotli", "deflate", "gzip"
 ]
 
 module.exports = function parseEncodingHeader(encodingHeader /*: ?string*/) /*: $ReadOnlyArray<Encoding>*/ {
 	if(encodingHeader == null || encodingHeader === "") {
-		return [ { name: "identity", weight: 0.1 } ]
+		return [ { name: "identity", weight: 1 } ]
 	}
 
 	let catchAll /*: ?number*/
@@ -25,7 +25,7 @@ module.exports = function parseEncodingHeader(encodingHeader /*: ?string*/) /*: 
 			const [ name, ...mods ] = x.split(";").map(x => x.trim())
 			const weight = mods.map(mod => {
 					const [ key, val ] = mod.split("=").map(x => x.trim())
-					return { key, val }
+					return { key: key.toLowerCase(), val }
 				})
 				.find(x => x.key === "q") || { key: "q", val: 1 }
 
@@ -66,7 +66,8 @@ module.exports = function parseEncodingHeader(encodingHeader /*: ?string*/) /*: 
 
 	if(catchAll == null) {
 		if(ident == null) {
-			encodings.push({ name: "identity", weight: 0.1 })
+			const highestWeight = encodings.reduce((highest, enc) => Math.max(highest, enc.weight), 0)
+			encodings.push({ name: "identity", weight: highestWeight })
 		}
 	} else {
 		for(const name of unusedEncodings) {

@@ -77,8 +77,11 @@ module.exports = class Server {
 					}
 				})
 				.filter(Boolean)
-				.sort((a, b) => a.size - b.size)
-				const smallestEncoding = matchingEncodings[0]
+				const biggestWeight = matchingEncodings[0].weight
+
+				const smallestEncoding = matchingEncodings
+				.filter(x => x.weight === biggestWeight)
+				.sort((a, b) => a.size - b.size)[0]
 
 				res.statusCode = file.statusCode
 				res.setHeader("content-length", smallestEncoding.size.toString())
