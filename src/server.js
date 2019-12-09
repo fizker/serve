@@ -84,7 +84,7 @@ module.exports = class Server {
 				res.setHeader("content-length", smallestEncoding.size.toString())
 				res.setHeader("content-type", file.mime)
 				if(smallestEncoding.name !== "identity") {
-					res.setHeader("content-encoding", smallestEncoding.name)
+					res.setHeader("content-encoding", smallestEncoding.name === "brotli" ? "br" : smallestEncoding.name)
 				}
 
 				const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)

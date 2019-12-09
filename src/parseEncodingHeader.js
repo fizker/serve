@@ -30,7 +30,11 @@ module.exports = function parseEncodingHeader(encodingHeader /*: ?string*/) /*: 
 				.find(x => x.key === "q") || { key: "q", val: 1 }
 
 			switch(name) {
-			//case "br":
+			case "br":
+				return {
+					name: "brotli",
+					weight: +weight.val,
+				}
 			case "deflate":
 			case "gzip":
 				return {

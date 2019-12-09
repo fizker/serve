@@ -129,7 +129,7 @@ describe("integration/simple-web-project/test.js", () => {
 			})
 			it("should return the expected data size", () => {
 				expect(testData.headers)
-					.to.have.property("content-length", "35")
+					.to.have.property("content-length", "20")
 			})
 		})
 		describe("asking for non-existing file", () => {
@@ -197,13 +197,13 @@ describe("integration/simple-web-project/test.js", () => {
 				expect(testData.headers)
 					.to.have.property("content-type", "application/javascript")
 			})
-			it("should compress to gzip, which is smallest", () => {
+			it("should compress to deflate, which is smallest", () => {
 				expect(testData.headers)
-					.to.have.property("content-encoding", "gzip")
+					.to.have.property("content-encoding", "deflate")
 			})
 			it("should return the expected data size", () => {
 				expect(testData.headers)
-					.to.have.property("content-length", "32")
+					.to.have.property("content-length", "20")
 			})
 		})
 		describe("asking for non-existing file", () => {
@@ -250,6 +250,34 @@ describe("integration/simple-web-project/test.js", () => {
 			it("should return the expected data size", () => {
 				expect(testData.headers)
 					.to.have.property("content-length", "11")
+			})
+		})
+	})
+	describe("accepting brotli, gzip and deflate", () => {
+		beforeEach(() => {
+			testData.encodings = [ "brotli", "deflate", "gzip" ]
+		})
+		describe("asking for js file", () => {
+			beforeEach(async () => {
+				const response = await fetch("/file.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "application/javascript")
+			})
+			it("should compress to br, which is smallest", () => {
+				expect(testData.headers)
+					.to.have.property("content-encoding", "br")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "15")
 			})
 		})
 	})

@@ -21,9 +21,9 @@ module.exports = ({
 			"statusCode": 200,
 			"sizes": {
 				"identity": 36,
-				"deflate": 35,
+				"deflate": 20,
 				"gzip": 32,
-				"brotli": null,
+				"brotli": 15,
 			},
 			"headers": {},
 		},

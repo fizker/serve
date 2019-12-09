@@ -16,7 +16,7 @@ type Data = {
 module.exports = (file /*: string*/, data /*: Data*/) /*: Promise<Response>*/ => {
 	return fetch(data.base + file, {
 		headers: {
-			"Accept-Encoding": data.encodings.join(","),
+			"Accept-Encoding": data.encodings.map(x => x === "brotli" ? "br" : x).join(","),
 		},
 	})
 }
