@@ -10,6 +10,11 @@ const parseEncodingHeader = require("./parseEncodingHeader")
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
 
+export type Alias = {
+	from: string,
+	to: string,
+}
+
 export type File = {
 	path: string,
 	mime: string,
@@ -26,10 +31,7 @@ export type File = {
 }
 
 export type ServerSetup = {
-	aliases: $ReadOnlyArray<{
-		from: string,
-		to: string,
-	}>,
+	aliases: $ReadOnlyArray<Alias>,
 	folders: {
 		identity: string,
 		deflate: string,
@@ -47,16 +49,15 @@ module.exports = class Server {
 
 	constructor(setup/*: ServerSetup*/) {
 		this.#setup = setup
+
 		this.#server = http.createServer((req, res) => {
 			const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
 			const parsedURL = url.parse(req.url)
 			const pathname = parsedURL.pathname
 
-			const file = (pathname == null
-				? null
-				: setup.files.find(x => pathname.startsWith(x.path))
-			) || setup.catchAllFile
+			const getFileForPath = this.#getFileForPath
+			const file = pathname == null ? null : getFileForPath(pathname)
 
 			if(file == null) {
 				res.statusCode = 404
@@ -94,6 +95,26 @@ module.exports = class Server {
 				fs.createReadStream(filepath).pipe(res)
 			}
 		})
+	}
+
+	#getAliasForPath = (path/*: string*/) /*: ?Alias*/ => {
+		return this.#setup.aliases.find(x => x.from === path)
+	}
+
+	#getFileForPath = (path/*: string*/) /*: ?File*/ => {
+		const file = this.#setup.files.find(x => path === x.path)
+		if(file != null) {
+			return file
+		}
+
+		const getAliasForPath = this.#getAliasForPath
+		const alias = getAliasForPath(path)
+		if(alias != null) {
+			const getFileForPath = this.#getFileForPath
+			return getFileForPath(alias.to)
+		} else {
+			return this.#setup.catchAllFile
+		}
 	}
 
 	async listen(port/*: number*/) /*: Promise<void>*/ {

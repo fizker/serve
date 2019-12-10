@@ -1,10 +1,11 @@
 // @flow strict
 
+const { it, describe, beforeEach } = require("mocha")
+const { expect } = require("chai")
+
 const { fetch, getHeaders } = require("../fetch")
 const server = require("../server")
 const setup = require("./setup")
-const { it, describe, beforeEach } = require("mocha")
-const { expect } = require("chai")
 
 /*::
 import { Response } from "node-fetch"

@@ -22,7 +22,7 @@ module.exports = {
 
 function unwrap/*::<T>*/(t/*:?T*/) /*: T*/ {
 	if(t == null) {
-		throw new Error("Found null")
+		throw new Error("Could not unwrap")
 	}
 	return t
 }
