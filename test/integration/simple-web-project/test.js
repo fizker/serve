@@ -1,25 +1,14 @@
 // @flow strict
 
-const fetch = require("../fetch")
+const { fetch, getHeaders } = require("../fetch")
 const server = require("../server")
 const setup = require("./setup")
 const { it, describe, beforeEach } = require("mocha")
 const { expect } = require("chai")
 
 /*::
-import { Response, Headers } from "node-fetch"
+import { Response } from "node-fetch"
 */
-
-function unwrap/*::<T>*/(t/*:?T*/) /*: T*/ {
-	if(t == null) {
-		throw new Error("Found null")
-	}
-	return t
-}
-
-function getHeaders(headers /*: Headers*/) /*: {[string]: string, ...}*/ {
-	return Object.fromEntries(headers.entries())
-}
 
 describe("integration/simple-web-project/test.js", () => {
 	let testData

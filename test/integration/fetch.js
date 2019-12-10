@@ -1,9 +1,9 @@
 // @flow strict
 
-const fetch = require("node-fetch").default
+const nodeFetch = require("node-fetch").default
 
 /*::
-import { Response } from "node-fetch"
+import { Response, Headers } from "node-fetch"
 
 type EncodingName = "deflate"|"brotli"|"gzip"
 type Encoding = EncodingName|{name: EncodingName, weight: number}
@@ -14,8 +14,25 @@ type Data = {
 }
 */
 
-module.exports = (file /*: string*/, data /*: Data*/) /*: Promise<Response>*/ => {
-	return fetch(data.base + file, {
+module.exports = {
+	fetch,
+	getHeaders,
+	unwrap,
+}
+
+function unwrap/*::<T>*/(t/*:?T*/) /*: T*/ {
+	if(t == null) {
+		throw new Error("Found null")
+	}
+	return t
+}
+
+function getHeaders(headers /*: Headers*/) /*: {[string]: string, ...}*/ {
+	return Object.fromEntries(headers.entries())
+}
+
+function fetch(file /*: string*/, data /*: Data*/) /*: Promise<Response>*/ {
+	return nodeFetch(data.base + file, {
 		headers: {
 			"Accept-Encoding": data.encodings
 				.map(x => typeof x === "string"
