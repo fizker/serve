@@ -45,5 +45,9 @@ module.exports = ({
 			"headers": {},
 		}
 	],
-	"catchAllFile": null
+	"catchAllFile": null,
+	"globalHeaders": {
+		"global-header": "is-set",
+		"another-global-header": "foo",
+	},
 }/*:ServerSetup*/)

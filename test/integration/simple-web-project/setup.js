@@ -51,5 +51,6 @@ module.exports = ({
 			"brotli": null,
 		},
 		"headers": {},
-	}
+	},
+	"globalHeaders": {},
 }/*:ServerSetup*/)

@@ -67,7 +67,9 @@ describe("integration/server-with-alias-no-catch-all/test.js", () => {
 	})
 	describe("asking for unknown path", () => {
 		beforeEach(async () => {
-			testData.response = await fetch("/not found", testData)
+			const response = await fetch("/not found", testData)
+			testData.response = response
+			testData.headers = getHeaders(response.headers)
 		})
 
 		it("should return 404", async () => {
@@ -77,6 +79,12 @@ describe("integration/server-with-alias-no-catch-all/test.js", () => {
 		it("should have status code 404", () => {
 			expect(testData.response)
 				.to.have.property("status", 404)
+		})
+		it("should have global headers on default 404", () => {
+			expect(testData.headers)
+				.to.have.property("global-header", "is-set")
+			expect(testData.headers)
+				.to.have.property("another-global-header", "foo")
 		})
 	})
 	describe("asking for file.js", () => {

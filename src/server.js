@@ -27,6 +27,7 @@ export type File = {
 	statusCode: number,
 	headers: {
 		[string]: string,
+		...
 	}
 }
 
@@ -40,6 +41,10 @@ export type ServerSetup = {
 	},
 	files: $ReadOnlyArray<File>,
 	catchAllFile: ?File,
+	globalHeaders: {
+		[string]: string,
+		...
+	},
 }
 */
 
@@ -59,7 +64,9 @@ module.exports = class Server {
 			const getFileForPath = this.#getFileForPath
 			const file = pathname == null ? null : getFileForPath(pathname)
 
+			const addHeaders = this.#addHeaders
 			if(file == null) {
+				addHeaders(res, this.#setup.globalHeaders)
 				res.statusCode = 404
 				res.setHeader("content-length", "10")
 				res.setHeader("Content-Type", "text/plain")
@@ -84,6 +91,9 @@ module.exports = class Server {
 				.filter(x => x.weight === biggestWeight)
 				.sort((a, b) => a.size - b.size)[0]
 
+				addHeaders(res, this.#setup.globalHeaders)
+				addHeaders(res, file.headers)
+
 				res.statusCode = file.statusCode
 				res.setHeader("content-length", smallestEncoding.size.toString())
 				res.setHeader("content-type", file.mime)
@@ -94,6 +104,13 @@ module.exports = class Server {
 				const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)
 				fs.createReadStream(filepath).pipe(res)
 			}
+		})
+	}
+
+	#addHeaders = (res/*: ServerResponse*/, headers/*:{[string]: string, ...}*/) => {
+		Object.keys(headers).forEach(header => {
+			const value = headers[header]
+			res.setHeader(header, value)
 		})
 	}
 
