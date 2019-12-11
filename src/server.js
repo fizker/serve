@@ -65,12 +65,9 @@ module.exports = class Server {
 			const file = pathname == null ? null : getFileForPath(pathname)
 
 			const addHeaders = this.#addHeaders
+			const writeErrorMessage = this.#writeErrorMessage
 			if(file == null) {
-				addHeaders(res, this.#setup.globalHeaders)
-				res.statusCode = 404
-				res.setHeader("content-length", "10")
-				res.setHeader("Content-Type", "text/plain")
-				res.end("Not found\n")
+				return writeErrorMessage(res, 404, "Not found")
 			} else {
 				const matchingEncodings = acceptedEncodings
 				.map(x => {
@@ -102,9 +99,24 @@ module.exports = class Server {
 				}
 
 				const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)
-				fs.createReadStream(filepath).pipe(res)
+
+				fs.promises.open(filepath).then(fd => {
+					fs.createReadStream(filepath, { fd }).pipe(res)
+						.on("close", () => { fd.close() })
+				}, (err) => {
+					writeErrorMessage(res, 500, "Server error")
+				})
 			}
 		})
+	}
+
+	#writeErrorMessage = (res/*: ServerResponse*/, status/*: number*/, message/*: string*/) => {
+		const addHeaders = this.#addHeaders
+		addHeaders(res, this.#setup.globalHeaders)
+		res.statusCode = status
+		res.setHeader("content-length", `${message.length + 1}`)
+		res.setHeader("Content-Type", "text/plain")
+		res.end(message + "\n")
 	}
 
 	#addHeaders = (res/*: ServerResponse*/, headers/*:{[string]: string, ...}*/) => {
