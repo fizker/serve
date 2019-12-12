@@ -1,7 +1,7 @@
 // @flow strict
 
 /*::
-import type { ServerSetup } from "../../src/server"
+import type { ServerSetup } from "../../src/types"
 */
 
 const Server = require("../../src/server")

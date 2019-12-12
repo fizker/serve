@@ -10,42 +10,7 @@ const parseEncodingHeader = require("./parseEncodingHeader")
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
 
-export type Alias = {
-	from: string,
-	to: string,
-}
-
-export type File = {
-	path: string,
-	mime: string,
-	sizes: {
-		identity: number,
-		deflate: ?number,
-		gzip: ?number,
-		brotli: ?number,
-	},
-	statusCode: number,
-	headers: {
-		[string]: string,
-		...
-	}
-}
-
-export type ServerSetup = {
-	aliases: $ReadOnlyArray<Alias>,
-	folders: {
-		identity: string,
-		deflate: string,
-		gzip: string,
-		brotli: string,
-	},
-	files: $ReadOnlyArray<File>,
-	catchAllFile: ?File,
-	globalHeaders: {
-		[string]: string,
-		...
-	},
-}
+import type { Alias, File, ServerSetup } from "./types"
 */
 
 module.exports = class Server {
