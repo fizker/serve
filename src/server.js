@@ -13,12 +13,24 @@ import type { Server as http$Server, ServerResponse } from "http"
 import type { Alias, File, ServerSetup } from "./types"
 */
 
+function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
+	return {
+		...setup,
+		folders: {
+			identity: path.resolve(rootDir, setup.folders.identity),
+			brotli: path.resolve(rootDir, setup.folders.brotli),
+			deflate: path.resolve(rootDir, setup.folders.deflate),
+			gzip: path.resolve(rootDir, setup.folders.gzip),
+		},
+	}
+}
+
 module.exports = class Server {
 	#setup/*: ServerSetup*/
 	#server/*: http$Server */
 
-	constructor(setup/*: ServerSetup*/) {
-		this.#setup = setup
+	constructor(rootDir/*: string*/, setup/*: ServerSetup*/) {
+		this.#setup = normalizeFolders(rootDir, setup)
 
 		this.#server = http.createServer((req, res) => {
 			const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])

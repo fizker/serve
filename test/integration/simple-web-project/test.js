@@ -15,7 +15,7 @@ describe("integration/simple-web-project/test.js", () => {
 	let testData
 	beforeEach(async () => {
 		testData = {
-			base: await server.start(setup),
+			base: await server.start(__dirname, setup),
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),

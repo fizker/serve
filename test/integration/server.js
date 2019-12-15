@@ -9,8 +9,8 @@ const Server = require("../../src/server")
 let servers = []
 
 module.exports = {
-	async start(setup/*: ServerSetup*/) /*: Promise<string>*/ {
-		const server = new Server(setup)
+	async start(rootDir/*: string*/, setup/*: ServerSetup*/) /*: Promise<string>*/ {
+		const server = new Server(rootDir, setup)
 		await server.listen(12345)
 		servers.push(server)
 		return "http://localhost:12345"

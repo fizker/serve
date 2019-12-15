@@ -1,7 +1,5 @@
 // @flow strict
 
-const path = require("path")
-
 /*::
 import type { ServerSetup } from "../../../src/types"
 */
@@ -9,10 +7,10 @@ import type { ServerSetup } from "../../../src/types"
 module.exports = ({
 	"aliases": [],
 	"folders": {
-		"identity": path.join(__dirname, "./", "files"),
-		"deflate": path.join(__dirname, "./", "deflate"),
-		"gzip": path.join(__dirname, "./", "gzip"),
-		"brotli": path.join(__dirname, "./", "brotli"),
+		"identity": "files",
+		"deflate": "deflate",
+		"gzip": "gzip",
+		"brotli": "brotli",
 	},
 	"files": [
 		{
