@@ -5,6 +5,11 @@ export type Alias = {
 	to: string,
 }
 
+export type Headers = {
+	[string]: string,
+	...
+}
+
 export type File = {
 	path: string,
 	mime: string,
@@ -15,10 +20,7 @@ export type File = {
 		brotli: ?number,
 	},
 	statusCode: number,
-	headers: {
-		[string]: string,
-		...
-	}
+	headers: Headers,
 }
 
 export type ServerSetup = {
@@ -31,8 +33,10 @@ export type ServerSetup = {
 	},
 	files: $ReadOnlyArray<File>,
 	catchAllFile: ?File,
-	globalHeaders: {
-		[string]: string,
-		...
-	},
+	globalHeaders: Headers,
+}
+
+export type JSONObject = {
+	[string]: mixed,
+	...
 }
