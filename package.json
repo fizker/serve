@@ -1,6 +1,6 @@
 {
   "name": "@fizker/serve",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A static file HTTP server",
   "main": "index.js",
   "scripts": {
