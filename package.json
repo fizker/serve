@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "A static file HTTP server",
   "main": "index.js",
+  "bin": "index.js",
   "scripts": {
     "test": "mocha"
   },
