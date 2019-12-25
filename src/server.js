@@ -36,7 +36,7 @@ module.exports = class Server {
 			const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
 			const parsedURL = url.parse(req.url)
-			const pathname = parsedURL.pathname
+			const pathname = decodeURI(parsedURL.pathname)
 
 			const getFileForPath = this.#getFileForPath
 			const file = pathname == null ? null : getFileForPath(pathname)

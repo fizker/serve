@@ -117,6 +117,21 @@ describe("integration/simple-web-project/test.js", () => {
 					.to.have.property("content-length", "11")
 			})
 		})
+		describe("asking for file with spaces", () => {
+			beforeEach(async () => {
+				const response = await fetch("/file with spaces.txt", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "5")
+			})
+		})
 	})
 	describe("accepting deflate", () => {
 		beforeEach(() => {

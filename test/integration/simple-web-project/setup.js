@@ -36,7 +36,19 @@ module.exports = ({
 				"brotli": null,
 			},
 			"headers": {},
-		}
+		},
+		{
+			"path": "/file with spaces.txt",
+			"mime": "text/plain",
+			"statusCode": 200,
+			"sizes": {
+				"identity": 5,
+				"gzip": null,
+				"deflate": null,
+				"brotli": null,
+			},
+			"headers": {},
+		},
 	],
 	"catchAllFile": {
 		"path": "/catchall.html",
