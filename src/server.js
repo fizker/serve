@@ -10,7 +10,8 @@ const parseEncodingHeader = require("./parseEncodingHeader")
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
 
-import type { Alias, File, ServerSetup } from "./types"
+import type { Alias, File, ServerSetup, Sizes } from "./types"
+import type { Encoding } from "./parseEncodingHeader"
 */
 
 function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
@@ -25,6 +26,39 @@ function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: Serve
 	}
 }
 
+function getPreferredEncoding(acceptedEncodings/*: $ReadOnlyArray<Encoding>*/, sizes/*: Sizes*/) /*: { ...Encoding, size: number }*/ {
+	const matchingEncodings = acceptedEncodings
+	.map(x => {
+		const size = sizes[x.name]
+		if(size == null) {
+			return null
+		} else {
+			return {
+				...x,
+				size,
+			}
+		}
+	})
+	.filter(Boolean)
+
+	// We could have decided on a 406 Not Acceptable, but we choose to serve identity encoding instead
+	if(matchingEncodings.length === 0) {
+		return {
+			name: "identity",
+			weight: 1,
+			size: sizes.identity,
+		}
+	}
+
+	const biggestWeight = matchingEncodings[0].weight
+
+	const smallestEncoding = matchingEncodings
+	.filter(x => x.weight === biggestWeight)
+	.sort((a, b) => a.size - b.size)[0]
+
+	return smallestEncoding
+}
+
 module.exports = class Server {
 	#setup/*: ServerSetup*/
 	#server/*: http$Server */
@@ -36,7 +70,7 @@ module.exports = class Server {
 			const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
 			const parsedURL = url.parse(req.url)
-			const pathname = decodeURI(parsedURL.pathname)
+			const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
 			const getFileForPath = this.#getFileForPath
 			const file = pathname == null ? null : getFileForPath(pathname)
@@ -46,24 +80,7 @@ module.exports = class Server {
 			if(file == null) {
 				return writeErrorMessage(res, 404, "Not found")
 			} else {
-				const matchingEncodings = acceptedEncodings
-				.map(x => {
-					const size = file.sizes[x.name]
-					if(size == null) {
-						return null
-					} else {
-						return {
-							...x,
-							size,
-						}
-					}
-				})
-				.filter(Boolean)
-				const biggestWeight = matchingEncodings[0].weight
-
-				const smallestEncoding = matchingEncodings
-				.filter(x => x.weight === biggestWeight)
-				.sort((a, b) => a.size - b.size)[0]
+				const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
 
 				addHeaders(res, this.#setup.globalHeaders)
 				addHeaders(res, file.headers)

@@ -5,7 +5,7 @@ const nodeFetch = require("node-fetch").default
 /*::
 import { Response, Headers } from "node-fetch"
 
-type EncodingName = "deflate"|"brotli"|"gzip"
+type EncodingName = "unknown"|"identity"|"*"|"deflate"|"brotli"|"gzip"
 type Encoding = EncodingName|{name: EncodingName, weight: number}
 type Data = {
 	base: string,

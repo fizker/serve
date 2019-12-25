@@ -337,4 +337,32 @@ describe("integration/simple-web-project/test.js", () => {
 			})
 		})
 	})
+	describe("accepting no known encodings", () => {
+		beforeEach(() => {
+			testData.encodings = [ { name: "unknown", weight: 1 }, { name: "identity", weight: 0 } ]
+		})
+		describe("asking for js file", () => {
+			beforeEach(async () => {
+				const response = await fetch("/file.js", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "application/javascript")
+			})
+			it("should not compress the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "36")
+			})
+		})
+	})
 })
