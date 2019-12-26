@@ -12,10 +12,11 @@ import { Response, Headers } from "node-fetch"
 */
 
 describe("integration/server-with-alias-no-catch-all/test.js", () => {
+for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", () => {
 	let testData
 	beforeEach(async () => {
 		testData = {
-			base: await server.start(__dirname, setup),
+			base: await server.start(__dirname, setup, useHTTPS),
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),
@@ -90,4 +91,5 @@ describe("integration/server-with-alias-no-catch-all/test.js", () => {
 				.to.have.property("x-shared-header", "overwritten value")
 		})
 	})
+})}
 })
