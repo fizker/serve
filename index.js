@@ -11,7 +11,7 @@ import type { ServerSetup } from "./src/types"
 */
 
 const [ , , setupPath ] = process.argv
-const port = +process.env.PORT || 12345
+const port = +process.env.PORT || 8080
 
 if(setupPath == null) {
 	console.log(`Usage: serve <path to setup>`)
