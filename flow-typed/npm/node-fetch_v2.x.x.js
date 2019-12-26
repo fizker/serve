@@ -28,7 +28,7 @@ declare module 'node-fetch' {
 
   declare type HeaderObject = { [index: string]: string, ... }
 
-  declare interface RequestInit {
+  declare export interface RequestInit {
     body?: BodyInit,
     headers?: HeaderObject,
     method?: string,

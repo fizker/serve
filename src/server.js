@@ -1,6 +1,8 @@
 // @flow strict
 
 const http = require("http")
+// $FlowFixMe flow 0.114.0 does not know what http2 is
+const http2 = require("http2")
 const url = require("url")
 const fs = require("fs")
 const path = require("path")
@@ -62,46 +64,56 @@ function getPreferredEncoding(acceptedEncodings/*: $ReadOnlyArray<Encoding>*/, s
 module.exports = class Server {
 	#setup/*: ServerSetup*/
 	#server/*: http$Server */
+	#secureServer/*: ?http$Server */
 
-	constructor(rootDir/*: string*/, setup/*: ServerSetup*/) {
+	constructor(
+		rootDir/*: string*/,
+		setup/*: ServerSetup*/,
+		{ cert, key }/*: { cert: Buffer, key: Buffer }*/ = {},
+	) {
 		this.#setup = normalizeFolders(rootDir, setup)
 
-		this.#server = http.createServer((req, res) => {
-			const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
+		this.#server = http.createServer(this.#onRequest)
+		if(cert && key) {
+			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, this.#onRequest)
+		}
+	}
 
-			const parsedURL = url.parse(req.url)
-			const pathname = decodeURI(parsedURL.pathname || "" || "/")
+	#onRequest = (req, res) => {
+		const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
-			const getFileForPath = this.#getFileForPath
-			const file = pathname == null ? null : getFileForPath(pathname)
+		const parsedURL = url.parse(req.url)
+		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
-			const addHeaders = this.#addHeaders
-			const writeErrorMessage = this.#writeErrorMessage
-			if(file == null) {
-				return writeErrorMessage(res, 404, "Not found")
-			} else {
-				const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
+		const getFileForPath = this.#getFileForPath
+		const file = pathname == null ? null : getFileForPath(pathname)
 
-				addHeaders(res, this.#setup.globalHeaders)
-				addHeaders(res, file.headers)
+		const addHeaders = this.#addHeaders
+		const writeErrorMessage = this.#writeErrorMessage
+		if(file == null) {
+			return writeErrorMessage(res, 404, "Not found")
+		} else {
+			const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
 
-				res.statusCode = file.statusCode
-				res.setHeader("content-length", smallestEncoding.size.toString())
-				res.setHeader("content-type", file.mime)
-				if(smallestEncoding.name !== "identity") {
-					res.setHeader("content-encoding", smallestEncoding.name === "brotli" ? "br" : smallestEncoding.name)
-				}
+			addHeaders(res, this.#setup.globalHeaders)
+			addHeaders(res, file.headers)
 
-				const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)
-
-				fs.promises.open(filepath).then(fd => {
-					fs.createReadStream(filepath, { fd }).pipe(res)
-						.on("close", () => { fd.close() })
-				}, (err) => {
-					writeErrorMessage(res, 500, "Server error")
-				})
+			res.statusCode = file.statusCode
+			res.setHeader("content-length", smallestEncoding.size.toString())
+			res.setHeader("content-type", file.mime)
+			if(smallestEncoding.name !== "identity") {
+				res.setHeader("content-encoding", smallestEncoding.name === "brotli" ? "br" : smallestEncoding.name)
 			}
-		})
+
+			const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)
+
+			fs.promises.open(filepath).then(fd => {
+				fs.createReadStream(filepath, { fd }).pipe(res)
+					.on("close", () => { fd.close() })
+			}, (err) => {
+				writeErrorMessage(res, 500, "Server error")
+			})
+		}
 	}
 
 	#writeErrorMessage = (res/*: ServerResponse*/, status/*: number*/, message/*: string*/) => {
@@ -140,14 +152,26 @@ module.exports = class Server {
 		}
 	}
 
-	async listen(port/*: number*/) /*: Promise<void>*/ {
-		await new Promise((res, rej) => {
-			this.#server.listen(port, (err) => { err ? rej(err) : res() })
-		})
+	async listen(port/*: number*/, httpsPort/*: ?number*/) /*: Promise<void>*/ {
+		const s = this.#secureServer
+		await Promise.all([
+			new Promise((res, rej) => {
+				this.#server.listen(port, (err) => { err ? rej(err) : res() })
+			}),
+			s && httpsPort != null && new Promise((res, rej) => {
+				s.listen(httpsPort, (err) => { err ? rej(err) : res() })
+			}),
+		])
 	}
 	async close() /*: Promise<void>*/ {
-		await new Promise((res, rej) => {
-			this.#server.close((err) => { err ? rej(err) : res() })
-		})
+		const s = this.#secureServer
+		await Promise.all([
+			new Promise((res, rej) => {
+				this.#server.close((err) => { err ? rej(err) : res() })
+			}),
+			s && new Promise((res, rej) => {
+				s.close((err) => { err ? rej(err) : res() })
+			}),
+		])
 	}
 }
