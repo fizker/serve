@@ -3,7 +3,6 @@
 const http = require("http")
 // $FlowFixMe flow 0.114.0 does not know what http2 is
 const http2 = require("http2")
-const url = require("url")
 const fs = require("fs")
 const path = require("path")
 
@@ -82,7 +81,7 @@ module.exports = class Server {
 	#onRequest = (req, res) => {
 		const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
-		const parsedURL = url.parse(req.url)
+		const parsedURL = new URL(req.url, "http://fake-base")
 		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
 		const getFileForPath = this.#getFileForPath
