@@ -3,7 +3,7 @@
 const { it, describe, beforeEach } = require("mocha")
 const { expect } = require("chai")
 
-const { fetch, getHeaders } = require("../fetch")
+const { fetch, getHeaders, http1, http2 } = require("../fetch")
 const server = require("../server")
 const setup = require("./setup")
 
@@ -20,6 +20,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),
+			status: (null/*: ?number*/),
 		}
 	})
 	describe("not accepting any encodings", () => {
@@ -49,6 +50,54 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					.to.have.property("content-length", "36")
 			})
 		})
+		if(useHTTPS) {
+			describe("asking for js file using HTTP/1", () => {
+				beforeEach(async () => {
+					const { headers, status } = await http1("/file.js", testData)
+					testData.status = status
+					testData.headers = headers
+				})
+				it("should have status code 200", () => {
+					expect(testData.status)
+						.to.equal(200)
+				})
+				it("should have proper mime-type", () => {
+					expect(testData.headers)
+						.to.have.property("content-type", "application/javascript")
+				})
+				it("should not compress the file", () => {
+					expect(testData.headers)
+						.to.not.have.property("content-encoding")
+				})
+				it("should return the expected data size", () => {
+					expect(testData.headers)
+						.to.have.property("content-length", "36")
+				})
+			})
+			describe("asking for js file using HTTP/2", () => {
+				beforeEach(async () => {
+					const { headers, status } = await http2("/file.js", testData)
+					testData.status = status
+					testData.headers = headers
+				})
+				it("should have status code 200", () => {
+					expect(testData.status)
+						.to.equal(200)
+				})
+				it("should have proper mime-type", () => {
+					expect(testData.headers)
+						.to.have.property("content-type", "application/javascript")
+				})
+				it("should not compress the file", () => {
+					expect(testData.headers)
+						.to.not.have.property("content-encoding")
+				})
+				it("should return the expected data size", () => {
+					expect(testData.headers)
+						.to.have.property("content-length", "36")
+				})
+			})
+		}
 		describe("asking for js file with query-string", () => {
 			beforeEach(async () => {
 				const response = await fetch("/file.js?foo", testData)

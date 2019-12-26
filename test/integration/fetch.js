@@ -4,6 +4,8 @@ const nodeFetch = require("node-fetch").default
 const fs = require("fs")
 const path = require("path")
 const https = require("https")
+// $FlowFixMe flow 0.114.0 does not know http2 module
+const http2 = require("http2")
 
 /*::
 import { Response, Headers } from "node-fetch"
@@ -22,6 +24,8 @@ module.exports = {
 	fetch,
 	getHeaders,
 	unwrap,
+	http1: sendHTTP1,
+	http2: sendHTTP2,
 }
 
 function unwrap/*::<T>*/(t/*:?T*/) /*: T*/ {
@@ -41,6 +45,39 @@ const agent = cert
 		rejectUnauthorized: false,
 		ca: cert,
 	}))
+
+async function sendHTTP1(file /*: string*/, data /*: Data*/) /*: Promise<{ status: number, headers: Headers }>*/ {
+	const options = { agent: await agent }
+	const response = await new Promise((res) => {
+		const req = https.request(data.base + file, options, res)
+		req.end()
+	})
+
+	return {
+		status: response.statusCode,
+		headers: response.headers,
+	}
+}
+
+async function sendHTTP2(file /*: string*/, data /*: Data*/) /*: Promise<{ status: number, headers: Headers }>*/ {
+	const client = http2.connect(data.base, {
+		ca: await cert,
+	})
+
+	return new Promise((res, rej) => {
+		const req = client.request({ ":path": file })
+		req.on("error", (e) => rej(e))
+		req.on("response", (headers, flags) => {
+			const response = {
+				status: headers[http2.constants.HTTP2_HEADER_STATUS],
+				headers,
+			}
+			client.close()
+			res(response)
+		})
+		req.end()
+	})
+}
 
 async function fetch(file /*: string*/, data /*: Data*/) /*: Promise<Response>*/ {
 	const options/*: RequestInit*/ = {
