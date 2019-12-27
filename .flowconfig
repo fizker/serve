@@ -9,6 +9,7 @@ flow-typed
 
 [options]
 exact_by_default=true
+include_warnings=true
 
 [lints]
 # (https://flow.org/en/docs/linting/)
