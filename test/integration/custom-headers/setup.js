@@ -3,7 +3,7 @@
 const path = require("path")
 
 /*::
-import type { ServerSetup } from "../../../src/types"
+import type { ServerSetup } from "../../../index"
 */
 
 module.exports = ({

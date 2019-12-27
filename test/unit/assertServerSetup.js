@@ -6,7 +6,7 @@ const { expect } = require("chai")
 const assertServerSetup = require("../../src/assertServerSetup")
 
 /*::
-import type { ServerSetup, JSONObject } from "../../src/types"
+import type { ServerSetup, JSONObject } from "../../index"
 */
 
 describe("unit/assertServerSetup.js", () => {
