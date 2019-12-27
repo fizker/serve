@@ -7,7 +7,7 @@ const path = require("path")
 import type { ServerSetup } from "../../index"
 */
 
-const Server = require("../../src/server")
+const { Server } = require("../../index")
 
 let servers = []
 
