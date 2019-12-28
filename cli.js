@@ -41,10 +41,10 @@ Promise.all([
 		const server = new Server(path.dirname(absSetupPath), setup, https)
 		return server.listen(port, httpsPort)
 	})
-	.then(() => {
-		console.log(`Server running at port ${port}`)
-		if(httpsPort != null && keyPath != null && certPath != null) {
-			console.log(`Server running as HTTPS on port ${httpsPort}`)
+	.then(({ http, https }) => {
+		console.log(`Server running at port ${http}`)
+		if(https != null) {
+			console.log(`Server running as HTTPS on port ${https}`)
 		}
 	})
 	.catch(error => {

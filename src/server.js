@@ -182,16 +182,18 @@ module.exports = class Server {
 		}
 	}
 
-	async listen(port/*: number*/, httpsPort/*: ?number*/) /*: Promise<void>*/ {
+	async listen(port/*: number*/, httpsPort/*: ?number*/) /*: Promise<{ http: number, https: ?number }>*/ {
 		const s = this.#secureServer
-		await Promise.all([
+		const [http, https ] = await Promise.all([
 			new Promise((res, rej) => {
-				this.#server.listen(port, (err) => { err ? rej(err) : res() })
+				this.#server.listen(port, (err) => { err ? rej(err) : res(port) })
 			}),
-			s && httpsPort != null && new Promise((res, rej) => {
-				s.listen(httpsPort, (err) => { err ? rej(err) : res() })
+			s == null || httpsPort == null ? null : new Promise((res, rej) => {
+				s.listen(httpsPort, (err) => { err ? rej(err) : res(httpsPort) })
 			}),
 		])
+
+		return { http, https }
 	}
 	async close() /*: Promise<void>*/ {
 		const s = this.#secureServer
