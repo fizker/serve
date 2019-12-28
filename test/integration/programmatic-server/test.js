@@ -2,7 +2,9 @@
 
 const fs = require("fs")
 const { it, describe, beforeEach } = require("mocha")
-const { expect } = require("chai")
+const { expect, ...chai } = require("chai")
+const fzkes = require("fzkes")
+chai.use(fzkes)
 
 const { loadHTTPSFiles } = require("../server")
 const { fetch, getHeaders, unwrap } = require("../fetch")
@@ -16,6 +18,7 @@ const ports = {
 
 /*::
 import { Response, Headers } from "node-fetch"
+import type { SetupProvider } from "../../../src/server"
 */
 describe("integration/programmatic-server/test.js", () => {
 for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", () => {
@@ -57,6 +60,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),
+			provider: (null /*?SetupProvider*/)
 		}
 
 		await testData.server.listen(ports.http, ports.https)
@@ -125,6 +129,70 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				it("should return the direct file and not the alias", async () => {
 					expect(await unwrap(testData.response).text())
 						.to.equal("'file content'\n")
+				})
+			})
+		})
+
+		describe("then adding a setup provider", () => {
+			beforeEach(() => {
+				const newSetup = {
+					...testData.setup,
+					aliases: [
+						{ from: "/other", to: "/file.js" },
+					],
+				}
+
+				testData.provider = fzkes.fake()
+					.returns(Promise.resolve({ rootDir: __dirname, setup: newSetup }))
+
+				testData.server.setSetupProvider(testData.provider)
+			})
+			describe("asking for /initial", () => {
+				beforeEach(async () => {
+					testData.response = await fetch("/initial", testData)
+				})
+
+				it("should return 404", async () => {
+					expect(await unwrap(testData.response).text())
+						.to.equal("Not found\n")
+				})
+				it("should have status code 404", () => {
+					expect(testData.response)
+						.to.have.property("status", 404)
+				})
+				it("should only invoke the provider once", () => {
+					expect(testData.provider)
+						.to.have.been
+						// $FlowFixMe flow does not know we override called()
+						.called(1)
+				})
+
+				describe("asking for /initial", () => {
+					beforeEach(async () => {
+						testData.response = await fetch("/initial", testData)
+					})
+					it("should now have invoked the provider twice", () => {
+						expect(testData.provider)
+							.to.have.been
+							// $FlowFixMe flow does not know we override called()
+							.called(2)
+					})
+				})
+			})
+			describe("asking for /other", () => {
+				beforeEach(async () => {
+					testData.response = await fetch("/other", testData)
+				})
+
+				it("should return the direct file and not the alias", async () => {
+					expect(await unwrap(testData.response).text())
+						.to.equal("'file content'\n")
+				})
+				it("should only invoke the provider once", () => {
+					expect(testData.provider)
+						.to.have.been
+						// $FlowFixMe flow does not know we override called()
+						.called(1)
 				})
 			})
 		})

@@ -14,6 +14,8 @@ import type { Server as http$Server, ServerResponse } from "http"
 
 import type { Alias, File, ServerSetup, Sizes } from "./types"
 import type { Encoding } from "./parseEncodingHeader"
+
+export type SetupProvider = () => Promise<{ rootDir: string, setup: ServerSetup }>
 */
 
 function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
@@ -63,6 +65,7 @@ function getPreferredEncoding(acceptedEncodings/*: $ReadOnlyArray<Encoding>*/, s
 
 module.exports = class Server {
 	#setup/*: ServerSetup*/
+	#setupProvider/*: ?SetupProvider*/
 	#server/*: http$Server */
 	#secureServer/*: ?http$Server */
 
@@ -73,7 +76,9 @@ module.exports = class Server {
 	) {
 		this.updateSetup(rootDir, setup)
 
-		this.#server = http.createServer(this.#onRequest)
+		this.#server = http.createServer(
+			// $FlowFixMe flow does not understand that it is OK for the handler to return promise
+			this.#onRequest)
 		if(cert && key) {
 			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, this.#onRequest)
 		}
@@ -83,23 +88,38 @@ module.exports = class Server {
 		this.#setup = normalizeFolders(rootDir, assertServerSetup(setup))
 	}
 
-	#onRequest = (req, res) => {
+	setSetupProvider(provider/*: ?SetupProvider*/) {
+		this.#setupProvider = provider
+	}
+
+	#getSetup = async () => {
+		if(this.#setupProvider == null) {
+			return this.#setup
+		}
+		const { rootDir, setup } = await this.#setupProvider()
+		return normalizeFolders(rootDir, assertServerSetup(setup))
+	}
+
+	#onRequest = async (req, res) => {
+		const g = this.#getSetup
+		const setup = await g()
+
 		const acceptedEncodings = parseEncodingHeader(req.headers["accept-encoding"])
 
 		const parsedURL = new URL(req.url, "http://fake-base")
 		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
 		const getFileForPath = this.#getFileForPath
-		const file = pathname == null ? null : getFileForPath(pathname)
+		const file = pathname == null ? null : getFileForPath(setup, pathname)
 
 		const addHeaders = this.#addHeaders
 		const writeErrorMessage = this.#writeErrorMessage
 		if(file == null) {
-			return writeErrorMessage(res, 404, "Not found")
+			return writeErrorMessage(setup, res, 404, "Not found")
 		} else {
 			const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
 
-			addHeaders(res, this.#setup.globalHeaders)
+			addHeaders(res, setup.globalHeaders)
 			addHeaders(res, file.headers)
 
 			res.statusCode = file.statusCode
@@ -109,20 +129,20 @@ module.exports = class Server {
 				res.setHeader("content-encoding", smallestEncoding.name === "brotli" ? "br" : smallestEncoding.name)
 			}
 
-			const filepath = path.join(this.#setup.folders[smallestEncoding.name], file.path)
+			const filepath = path.join(setup.folders[smallestEncoding.name], file.path)
 
 			fs.promises.open(filepath).then(fd => {
 				fs.createReadStream(filepath, { fd }).pipe(res)
 					.on("close", () => { fd.close() })
 			}, (err) => {
-				writeErrorMessage(res, 500, "Server error")
+				writeErrorMessage(setup, res, 500, "Server error")
 			})
 		}
 	}
 
-	#writeErrorMessage = (res/*: ServerResponse*/, status/*: number*/, message/*: string*/) => {
+	#writeErrorMessage = (setup/*: ServerSetup*/, res/*: ServerResponse*/, status/*: number*/, message/*: string*/) => {
 		const addHeaders = this.#addHeaders
-		addHeaders(res, this.#setup.globalHeaders)
+		addHeaders(res, setup.globalHeaders)
 		res.statusCode = status
 		res.setHeader("content-length", `${message.length + 1}`)
 		res.setHeader("Content-Type", "text/plain")
@@ -136,23 +156,23 @@ module.exports = class Server {
 		})
 	}
 
-	#getAliasForPath = (path/*: string*/) /*: ?Alias*/ => {
-		return this.#setup.aliases.find(x => x.from === path)
+	#getAliasForPath = (setup/*: ServerSetup*/, path/*: string*/) /*: ?Alias*/ => {
+		return setup.aliases.find(x => x.from === path)
 	}
 
-	#getFileForPath = (path/*: string*/) /*: ?File*/ => {
-		const file = this.#setup.files.find(x => path === x.path)
+	#getFileForPath = (setup/*: ServerSetup*/, path/*: string*/) /*: ?File*/ => {
+		const file = setup.files.find(x => path === x.path)
 		if(file != null) {
 			return file
 		}
 
 		const getAliasForPath = this.#getAliasForPath
-		const alias = getAliasForPath(path)
+		const alias = getAliasForPath(setup, path)
 		if(alias != null) {
 			const getFileForPath = this.#getFileForPath
-			return getFileForPath(alias.to)
+			return getFileForPath(setup, alias.to)
 		} else {
-			return this.#setup.catchAllFile
+			return setup.catchAllFile
 		}
 	}
 
