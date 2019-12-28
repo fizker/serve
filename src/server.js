@@ -16,6 +16,7 @@ import type { Alias, File, ServerSetup, Sizes } from "./types"
 import type { Encoding } from "./parseEncodingHeader"
 
 export type SetupProvider = () => Promise<{ rootDir: string, setup: ServerSetup }>
+export type FileProvider = (setup: ServerSetup, path: string) => Promise<?File>
 */
 
 function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
@@ -66,6 +67,7 @@ function getPreferredEncoding(acceptedEncodings/*: $ReadOnlyArray<Encoding>*/, s
 module.exports = class Server {
 	#setup/*: ServerSetup*/
 	#setupProvider/*: ?SetupProvider*/
+	#fileProvider/*: ?FileProvider*/
 	#server/*: http$Server */
 	#secureServer/*: ?http$Server */
 
@@ -91,6 +93,9 @@ module.exports = class Server {
 	setSetupProvider(provider/*: ?SetupProvider*/) {
 		this.#setupProvider = provider
 	}
+	setFileProvider(provider/*: ?FileProvider*/) {
+		this.#fileProvider = provider
+	}
 
 	#getSetup = async () => {
 		if(this.#setupProvider == null) {
@@ -110,7 +115,7 @@ module.exports = class Server {
 		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
 		const getFileForPath = this.#getFileForPath
-		const file = pathname == null ? null : getFileForPath(setup, pathname)
+		const file = await getFileForPath(setup, pathname)
 
 		const addHeaders = this.#addHeaders
 		const writeErrorMessage = this.#writeErrorMessage
@@ -160,8 +165,9 @@ module.exports = class Server {
 		return setup.aliases.find(x => x.from === path)
 	}
 
-	#getFileForPath = (setup/*: ServerSetup*/, path/*: string*/) /*: ?File*/ => {
-		const file = setup.files.find(x => path === x.path)
+	#getFileForPath = async (setup/*: ServerSetup*/, path/*: string*/) /*: Promise<?File>*/ => {
+		const p = this.#fileProvider || ((setup, path) => setup.files.find(x => path === x.path))
+		const file = await p(setup, path)
 		if(file != null) {
 			return file
 		}

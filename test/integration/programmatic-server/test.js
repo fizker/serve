@@ -18,7 +18,7 @@ const ports = {
 
 /*::
 import { Response, Headers } from "node-fetch"
-import type { SetupProvider } from "../../../src/server"
+import type { File, SetupProvider, FileProvider } from "../../../index"
 */
 describe("integration/programmatic-server/test.js", () => {
 for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", () => {
@@ -60,7 +60,8 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),
-			provider: (null /*?SetupProvider*/)
+			setupProvider: (null /*?SetupProvider*/),
+			fileProvider: (null /*?FileProvider*/),
 		}
 
 		await testData.server.listen(ports.http, ports.https)
@@ -96,7 +97,42 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			})
 		})
 
-		describe("then updating the server", () => {
+		describe("adding a file provider", () => {
+			beforeEach(() => {
+				const secondFile/*: File*/ = testData.setup.files[0]
+				testData.fileProvider = fzkes.fake()
+					.withComplexArgs(null, { value: "/first" }).returns(Promise.resolve(null))
+					.withComplexArgs(null, { value: "/second" }).returns(Promise.resolve(secondFile))
+				testData.server.setFileProvider(testData.fileProvider)
+			})
+
+			describe("asking for /initial", () => {
+				beforeEach(async () => {
+					testData.response = await fetch("/first", testData)
+				})
+
+				it("should return 404", async () => {
+					expect(await unwrap(testData.response).text())
+						.to.equal("Not found\n")
+				})
+				it("should have status code 404", () => {
+					expect(testData.response)
+						.to.have.property("status", 404)
+				})
+			})
+			describe("asking for /other", () => {
+				beforeEach(async () => {
+					testData.response = await fetch("/second", testData)
+				})
+
+				it("should return the file", async () => {
+					expect(await unwrap(testData.response).text())
+						.to.equal("'file content'\n")
+				})
+			})
+		})
+
+		describe("updating the server", () => {
 			beforeEach(() => {
 				const newSetup = {
 					...testData.setup,
@@ -133,7 +169,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			})
 		})
 
-		describe("then adding a setup provider", () => {
+		describe("adding a setup provider", () => {
 			beforeEach(() => {
 				const newSetup = {
 					...testData.setup,
@@ -142,10 +178,10 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					],
 				}
 
-				testData.provider = fzkes.fake()
+				testData.setupProvider = fzkes.fake()
 					.returns(Promise.resolve({ rootDir: __dirname, setup: newSetup }))
 
-				testData.server.setSetupProvider(testData.provider)
+				testData.server.setSetupProvider(testData.setupProvider)
 			})
 			describe("asking for /initial", () => {
 				beforeEach(async () => {
@@ -161,7 +197,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						.to.have.property("status", 404)
 				})
 				it("should only invoke the provider once", () => {
-					expect(testData.provider)
+					expect(testData.setupProvider)
 						.to.have.been
 						// $FlowFixMe flow does not know we override called()
 						.called(1)
@@ -172,7 +208,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						testData.response = await fetch("/initial", testData)
 					})
 					it("should now have invoked the provider twice", () => {
-						expect(testData.provider)
+						expect(testData.setupProvider)
 							.to.have.been
 							// $FlowFixMe flow does not know we override called()
 							.called(2)
@@ -189,7 +225,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						.to.equal("'file content'\n")
 				})
 				it("should only invoke the provider once", () => {
-					expect(testData.provider)
+					expect(testData.setupProvider)
 						.to.have.been
 						// $FlowFixMe flow does not know we override called()
 						.called(1)
