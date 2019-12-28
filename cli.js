@@ -23,19 +23,19 @@ if(setupPath == null) {
 const absSetupPath = path.resolve(setupPath)
 
 Promise.all([
-	fs.promises.readFile(absSetupPath, "utf-8")
-		.then(JSON.parse)
-		.then(assertServerSetup),
+	fs.promises.readFile(absSetupPath, "utf-8").then(async(raw) => {
+		const o = JSON.parse(raw)
+		return assertServerSetup(o)
+	}),
 	certPath != null && keyPath != null
-	? Promise.all([
-		fs.promises.readFile(keyPath),
-		fs.promises.readFile(certPath),
-	])
-		.then(
+		? Promise.all([
+			fs.promises.readFile(keyPath),
+			fs.promises.readFile(certPath),
+		]).then(
 			([ key, cert ]) => { return { key, cert } },
 			(e) => undefined,
 		)
-	: undefined,
+		: undefined,
 ])
 	.then(([ setup, https ]) => {
 		const server = new Server(path.dirname(absSetupPath), setup, https)
