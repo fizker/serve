@@ -6,6 +6,7 @@ const http2 = require("http2")
 const fs = require("fs")
 const path = require("path")
 
+const assertServerSetup = require("./assertServerSetup")
 const parseEncodingHeader = require("./parseEncodingHeader")
 
 /*::
@@ -70,12 +71,16 @@ module.exports = class Server {
 		setup/*: ServerSetup*/,
 		{ cert, key }/*: { cert: Buffer, key: Buffer }*/ = {},
 	) {
-		this.#setup = normalizeFolders(rootDir, setup)
+		this.updateSetup(rootDir, setup)
 
 		this.#server = http.createServer(this.#onRequest)
 		if(cert && key) {
 			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, this.#onRequest)
 		}
+	}
+
+	updateSetup(rootDir/*: string*/, setup/*: ServerSetup*/) {
+		this.#setup = normalizeFolders(rootDir, assertServerSetup(setup))
 	}
 
 	#onRequest = (req, res) => {

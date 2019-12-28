@@ -11,20 +11,26 @@ const { Server } = require("../../index")
 
 let servers = []
 
-module.exports = {
-	async start(rootDir/*: string*/, setup/*: ServerSetup*/, useHTTPS/*: boolean*/) /*: Promise<string>*/ {
-		const [ cert, key ] = await Promise.all([
-			fs.promises.readFile(path.join(__dirname, "cert.pem")),
-			fs.promises.readFile(path.join(__dirname, "key.pem")),
-		])
+async function loadHTTPSFiles() {
+	const [ cert, key ] = await Promise.all([
+		fs.promises.readFile(path.join(__dirname, "cert.pem")),
+		fs.promises.readFile(path.join(__dirname, "key.pem")),
+	])
 
-		const server = new Server(rootDir, setup, { key, cert })
+	return { cert, key }
+}
+
+module.exports = {
+	loadHTTPSFiles,
+
+	async start(rootDir/*: string*/, setup/*: ServerSetup*/, useHTTPS/*: boolean*/) /*: Promise<string>*/ {
+		const server = new Server(rootDir, setup, await loadHTTPSFiles())
 		await server.listen(12345, 12346)
 		servers.push(server)
 		return useHTTPS
 		? "https://localhost:12346"
 		: "http://localhost:12345"
-	}
+	},
 }
 
 afterEach(async () => {

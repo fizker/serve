@@ -5,7 +5,7 @@ import type { Alias, Headers, File, ServerSetup, JSONObject } from "./types"
 */
 
 module.exports = assertServerSetup
-function assertServerSetup(input/*: JSONObject*/) /*: ServerSetup*/ {
+function assertServerSetup(input/*: JSONObject|$Shape<ServerSetup>*/) /*: ServerSetup*/ {
 	const { aliases, folders, files, catchAllFile, globalHeaders } = input
 
 	if(folders == null || typeof folders !== "object" || Array.isArray(folders)) {
