@@ -41,21 +41,21 @@ function assertFile(val/*: mixed*/) /*: File*/ {
 
 	const p = assertString(path, "path")
 	if(p[0] !== "/") {
-		throw new Error("File paths must start with a `/`")
+		throw new Error(`${p}: File path must start with a \`/\``)
 	}
 
 	if(sizes == null || typeof sizes !== "object" || Array.isArray(sizes)) {
-		throw new Error
+		throw new Error(`${p}: Sizes must be valid size object`)
 	}
 
 	const m = assertString(mime, "mime")
 	if(m === "") {
-		throw new Error("mime must have a value")
+		throw new Error(`${p}: mime must have a value`)
 	}
 
 	const s = assertInt(statusCode, "statusCode")
 	if(s <= 0) {
-		throw new Error("statusCode must be a valid status code")
+		throw new Error(`${p}: statusCode must be a valid status code`)
 	}
 
 	return {
