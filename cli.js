@@ -37,15 +37,21 @@ Promise.all([
 		)
 		: undefined,
 ])
-	.then(([ setup, https ]) => {
-		const server = new Server(path.dirname(absSetupPath), setup, https)
-		return server.listen(port, httpsPort)
-	})
-	.then(({ http, https }) => {
+	.then(async ([ setup, httpsSetup ]) => {
+		const server = new Server(path.dirname(absSetupPath), setup, httpsSetup)
+		const { http, https } = await server.listen(port, httpsPort)
+
 		console.log(`Server running at port ${http}`)
 		if(https != null) {
 			console.log(`Server running as HTTPS on port ${https}`)
 		}
+
+		process.on("SIGINT", () => {
+			server.close()
+		})
+		process.on("SIGTERM", () => {
+			server.close()
+		})
 	})
 	.catch(error => {
 		console.error(error.message)
