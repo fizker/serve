@@ -25,6 +25,8 @@ module.exports = ({
 			},
 			"headers": {
 			},
+			"envReplacements": {
+			},
 		},
 		{
 			"path": "/non-existing-file",
@@ -37,6 +39,8 @@ module.exports = ({
 				"brotli": null,
 			},
 			"headers": {
+			},
+			"envReplacements": {
 			},
 		},
 	],

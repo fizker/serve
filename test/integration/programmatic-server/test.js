@@ -46,6 +46,8 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						"brotli": null,
 					},
 					"headers": {},
+					"envReplacements": {
+					},
 				},
 			],
 			"catchAllFile": null,

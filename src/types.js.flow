@@ -24,12 +24,18 @@ export type Folders = {
 	brotli: string,
 }
 
+export type EnvReplacements = {
+	[string]: string,
+	...
+}
+
 export type File = {
 	path: string,
 	mime: string,
 	sizes: Sizes,
 	statusCode: number,
 	headers: Headers,
+	envReplacements: EnvReplacements,
 }
 
 export type ServerSetup = {

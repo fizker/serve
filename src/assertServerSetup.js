@@ -1,7 +1,7 @@
 // @flow strict
 
 /*::
-import type { Alias, Headers, File, ServerSetup, JSONObject } from "./types"
+import type { Alias, Headers, File, EnvReplacements, ServerSetup, JSONObject } from "./types"
 */
 
 module.exports = assertServerSetup
@@ -37,7 +37,7 @@ function assertFile(val/*: mixed*/) /*: File*/ {
 		throw new Error("File must be object")
 	}
 
-	const { path, mime, statusCode, headers, sizes } = val
+	const { path, mime, statusCode, headers, sizes, envReplacements } = val
 
 	const p = assertString(path, "path")
 	if(p[0] !== "/") {
@@ -69,6 +69,7 @@ function assertFile(val/*: mixed*/) /*: File*/ {
 			gzip: assertIntOrNull(sizes.gzip, "sizes.gzip"),
 			deflate: assertIntOrNull(sizes.deflate, "sizes.deflate"),
 		},
+		envReplacements: assertEnvReplacements(envReplacements),
 	}
 }
 
@@ -82,6 +83,30 @@ function assertFiles(val/*: mixed*/) /*: $ReadOnlyArray<File>*/ {
 	}
 
 	return val.map(assertFile)
+}
+
+function assertEnvReplacements(val/*: mixed*/) /*: EnvReplacements*/ {
+	if(val == null) {
+		return {}
+	}
+
+	if(typeof val !== "object" || Array.isArray(val)) {
+		throw new Error("EnvReplacements must be a string-string dictionary")
+	}
+
+	return Object.keys(val).reduce((o, key) => {
+		const v = val[key]
+		if(typeof v !== "string") {
+			throw new Error("EnvReplacements must be a string-string dictionary")
+		}
+
+		if(!(v in process.env)) {
+			throw new Error(`Key ${v} from envReplacements is missing`)
+		}
+
+		o[key] = v
+		return o
+	}, {})
 }
 
 function assertHeaders(val/*: mixed*/) /*: Headers*/ {

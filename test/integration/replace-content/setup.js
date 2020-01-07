@@ -14,50 +14,23 @@ module.exports = ({
 	},
 	"files": [
 		{
-			"path": "/file.js",
-			"mime": "application/javascript",
+			"path": "/index.html",
+			"mime": "text/html",
 			"statusCode": 200,
 			"sizes": {
-				"identity": 36,
-				"deflate": 20,
-				"gzip": 32,
-				"brotli": 15,
-			},
-			"headers": {},
-			"envReplacements": {
-			},
-		},
-		{
-			"path": "/uncompressable.txt",
-			"mime": "text/plain",
-			"statusCode": 200,
-			"sizes": {
-				"identity": 11,
-				"gzip": 31,
-				"deflate": 19,
-				"brotli": null,
-			},
-			"headers": {},
-			"envReplacements": {
-			},
-		},
-		{
-			"path": "/file with spaces.txt",
-			"mime": "text/plain",
-			"statusCode": 200,
-			"sizes": {
-				"identity": 5,
-				"gzip": null,
+				"identity": 89,
+				"gzip": 81,
 				"deflate": null,
 				"brotli": null,
 			},
 			"headers": {},
 			"envReplacements": {
+				"Some content": "ENV_VAR",
 			},
 		},
 	],
 	"catchAllFile": {
-		"path": "/catchall.html",
+		"path": "/index.html",
 		"mime": "text/html",
 		"statusCode": 200,
 		"sizes": {
@@ -68,6 +41,7 @@ module.exports = ({
 		},
 		"headers": {},
 		"envReplacements": {
+			"Some content": "ENV_VAR",
 		},
 	},
 	"globalHeaders": {},

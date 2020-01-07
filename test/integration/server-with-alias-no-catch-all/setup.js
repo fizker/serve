@@ -29,6 +29,8 @@ module.exports = ({
 				"brotli": null,
 			},
 			"headers": {},
+			"envReplacements": {
+			},
 		},
 		{
 			"path": "/index.html",
@@ -41,6 +43,8 @@ module.exports = ({
 				"brotli": null,
 			},
 			"headers": {},
+			"envReplacements": {
+			},
 		}
 	],
 	"catchAllFile": null,

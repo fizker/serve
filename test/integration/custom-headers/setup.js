@@ -31,6 +31,8 @@ module.exports = ({
 				"x-some-header": "foo",
 				"another-file-header": "foo",
 			},
+			"envReplacements": {
+			},
 		},
 		{
 			"path": "/file-with-overlapping-header",
@@ -44,6 +46,8 @@ module.exports = ({
 			},
 			"headers": {
 				"x-shared-header": "overwritten value",
+			},
+			"envReplacements": {
 			},
 		},
 	],
@@ -60,6 +64,8 @@ module.exports = ({
 		"headers": {
 			"x-header-for-catch-all": "is-set",
 			"another-catchall-header": "foo",
+		},
+		"envReplacements": {
 		},
 	},
 	"globalHeaders": {

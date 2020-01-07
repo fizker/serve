@@ -70,6 +70,7 @@ module.exports = class Server {
 	#fileProvider/*: ?FileProvider*/
 	#server/*: http$Server */
 	#secureServer/*: ?http$Server */
+	#cachedFiles/*: { [path: string]: Promise<string>, ... }*/ = {}
 
 	constructor(
 		rootDir/*: string*/,
@@ -88,6 +89,7 @@ module.exports = class Server {
 
 	updateSetup(rootDir/*: string*/, setup/*: ServerSetup*/) {
 		this.#setup = normalizeFolders(rootDir, assertServerSetup(setup))
+		this.#cachedFiles = {}
 	}
 
 	setSetupProvider(provider/*: ?SetupProvider*/) {
@@ -136,12 +138,20 @@ module.exports = class Server {
 
 			const filepath = path.join(setup.folders[smallestEncoding.name], file.path)
 
-			fs.promises.open(filepath).then(fd => {
-				fs.createReadStream(filepath, { fd }).pipe(res)
-					.on("close", () => { fd.close() })
-			}, (err) => {
+			try {
+				if(this.#cachedFiles[file.path] != null) {
+					const content = await this.#cachedFiles[file.path]
+					res.end(content)
+				} else {
+					await fs.promises.open(filepath).then(fd => new Promise((resolve, reject) => {
+						fs.createReadStream(filepath, { fd }).pipe(res)
+						.on("close", () => { fd.close(); resolve() })
+						.on("error", reject)
+					}))
+				}
+			} catch(err) {
 				writeErrorMessage(setup, res, 500, "Server error")
-			})
+			}
 		}
 	}
 
@@ -165,11 +175,57 @@ module.exports = class Server {
 		return setup.aliases.find(x => x.from === path)
 	}
 
+	#handleEnvReplacements = async (setup/*: ServerSetup*/, file/*: ?File*/) /*: Promise<?File>*/ => {
+		if(file == null || file.envReplacements == null) {
+			return file
+		}
+
+		const rep = file.envReplacements
+		const e = Object.keys(rep).map((text) => {
+			const repl = process.env[rep[text]]
+			if(repl == null) {
+				throw new Error(`Key ${rep[text]} is missing in environment variables`)
+			}
+			return { text, repl }
+		})
+
+		if(e.length === 0) {
+			return file
+		}
+
+		if(this.#cachedFiles[file.path] == null) {
+			this.#cachedFiles[file.path] = fs.promises.readFile(path.join(setup.folders.identity, file.path), "utf-8")
+				.then((content) => content.replace(
+					new RegExp(`(${e.map(x => x.text).join("|")})`, "g"),
+					(text) => {
+						const c = e.find(x => x.text === text)
+						if(c == null) {
+							throw new Error(`Replacement for ${text} not found`)
+						}
+						return c.repl
+					},
+				))
+		}
+
+		const content = await this.#cachedFiles[file.path]
+
+		return {
+			...file,
+			sizes: {
+				identity: content.length,
+				brotli: null,
+				deflate: null,
+				gzip: null,
+			},
+		}
+	}
+
 	#getFileForPath = async (setup/*: ServerSetup*/, path/*: string*/) /*: Promise<?File>*/ => {
+		const her = this.#handleEnvReplacements
 		const p = this.#fileProvider || ((setup, path) => setup.files.find(x => path === x.path))
 		const file = await p(setup, path)
 		if(file != null) {
-			return file
+			return her(setup, file)
 		}
 
 		const getAliasForPath = this.#getAliasForPath
@@ -178,7 +234,7 @@ module.exports = class Server {
 			const getFileForPath = this.#getFileForPath
 			return getFileForPath(setup, alias.to)
 		} else {
-			return setup.catchAllFile
+			return her(setup, setup.catchAllFile)
 		}
 	}
 

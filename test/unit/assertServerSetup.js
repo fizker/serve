@@ -615,6 +615,7 @@ describe("unit/assertServerSetup.js", () => {
 								gzip: null,
 							},
 							statusCode: 200,
+							envReplacements: {},
 						},
 					],
 					folders: {
@@ -668,6 +669,7 @@ describe("unit/assertServerSetup.js", () => {
 							gzip: null,
 						},
 						statusCode: 200,
+						envReplacements: {},
 					},
 				},
 			},
@@ -731,6 +733,7 @@ describe("unit/assertServerSetup.js", () => {
 								gzip: null,
 							},
 							statusCode: 200,
+							envReplacements: {},
 						},
 						{
 							path: "/some-headers",
@@ -746,6 +749,7 @@ describe("unit/assertServerSetup.js", () => {
 								gzip: null,
 							},
 							statusCode: 200,
+							envReplacements: {},
 						},
 						{
 							path: "/compressed",
@@ -758,6 +762,7 @@ describe("unit/assertServerSetup.js", () => {
 								gzip: 12,
 							},
 							statusCode: 201,
+							envReplacements: {},
 						},
 					],
 					folders: {
@@ -818,6 +823,7 @@ describe("unit/assertServerSetup.js", () => {
 								gzip: null,
 							},
 							statusCode: 200,
+							envReplacements: {},
 						},
 					],
 					folders: {
