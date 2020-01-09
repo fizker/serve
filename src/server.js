@@ -9,6 +9,7 @@ const path = require("path")
 const assertServerSetup = require("./assertServerSetup")
 const parseEncodingHeader = require("./parseEncodingHeader")
 const compress = require("./compress")
+const escapeRegex = require("./escapeRegex")
 
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
@@ -215,7 +216,7 @@ module.exports = class Server {
 		if(this.#cachedFiles[file.path] == null) {
 			this.#cachedFiles[file.path] = fs.promises.readFile(path.join(setup.folders.identity, file.path), "utf-8")
 				.then((content) => content.replace(
-					new RegExp(`(${e.map(x => x.text).join("|")})`, "g"),
+					new RegExp(`(${e.map(x => escapeRegex(x.text)).join("|")})`, "g"),
 					(text) => {
 						const c = e.find(x => x.text === text)
 						if(c == null) {

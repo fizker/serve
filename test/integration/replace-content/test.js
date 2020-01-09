@@ -176,6 +176,47 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					)
 			})
 		})
+
+		describe("asking for regex-chars.html file, accepting identity only", () => {
+			beforeEach(async () => {
+				testData.encodings = []
+				const response = await fetch("/regex-chars.html", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/html")
+			})
+			it("should not gzip the file", () => {
+				expect(testData.headers)
+					.to.not.have.property("content-encoding")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "56")
+			})
+			it("should return the expected data", async () => {
+				const response = testData.response
+				if(response == null) {
+					throw new Error("Response not set")
+				}
+
+				expect(await response.text())
+					.to.equal(
+`<!doctype html>
+
+<h1>Catchall page</h1>
+
+some new value
+`
+					)
+			})
+		})
 	})
 })}
 })

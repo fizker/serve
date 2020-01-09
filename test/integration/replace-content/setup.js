@@ -28,6 +28,21 @@ module.exports = ({
 				"Some content": "ENV_VAR",
 			},
 		},
+		{
+			"path": "/regex-chars.html",
+			"mime": "text/html",
+			"statusCode": 200,
+			"sizes": {
+				"identity": 54,
+				"gzip": null,
+				"deflate": null,
+				"brotli": null,
+			},
+			"headers": {},
+			"envReplacements": {
+				"${regex key}": "ENV_VAR",
+			},
+		},
 	],
 	"catchAllFile": {
 		"path": "/index.html",
