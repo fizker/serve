@@ -8,6 +8,7 @@ const path = require("path")
 
 const assertServerSetup = require("./assertServerSetup")
 const parseEncodingHeader = require("./parseEncodingHeader")
+const compress = require("./compress")
 
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
@@ -70,7 +71,15 @@ module.exports = class Server {
 	#fileProvider/*: ?FileProvider*/
 	#server/*: http$Server */
 	#secureServer/*: ?http$Server */
-	#cachedFiles/*: { [path: string]: Promise<string>, ... }*/ = {}
+	#cachedFiles/*: {
+		[path: string]: Promise<{
+			identity: string,
+			brotli: Buffer,
+			gzip: Buffer,
+			deflate: Buffer,
+		}>,
+		...
+	}*/ = {}
 
 	constructor(
 		rootDir/*: string*/,
@@ -136,13 +145,12 @@ module.exports = class Server {
 				res.setHeader("content-encoding", smallestEncoding.name === "brotli" ? "br" : smallestEncoding.name)
 			}
 
-			const filepath = path.join(setup.folders[smallestEncoding.name], file.path)
-
 			try {
 				if(this.#cachedFiles[file.path] != null) {
 					const content = await this.#cachedFiles[file.path]
-					res.end(content)
+					res.end(content[smallestEncoding.name])
 				} else {
+					const filepath = path.join(setup.folders[smallestEncoding.name], file.path)
 					await fs.promises.open(filepath).then(fd => new Promise((resolve, reject) => {
 						fs.createReadStream(filepath, { fd }).pipe(res)
 						.on("close", () => { fd.close(); resolve() })
@@ -205,6 +213,15 @@ module.exports = class Server {
 						return c.repl
 					},
 				))
+				.then(async (identity) => {
+					const [ brotli, gzip, deflate ] = await Promise.all([
+						compress("brotli", identity),
+						compress("gzip", identity),
+						compress("deflate", identity),
+					])
+
+					return { identity, gzip, brotli, deflate }
+				})
 		}
 
 		const content = await this.#cachedFiles[file.path]
@@ -212,10 +229,10 @@ module.exports = class Server {
 		return {
 			...file,
 			sizes: {
-				identity: content.length,
-				brotli: null,
-				deflate: null,
-				gzip: null,
+				identity: content.identity.length,
+				brotli: content.brotli.length,
+				deflate: content.deflate.length,
+				gzip: content.gzip.length,
 			},
 		}
 	}

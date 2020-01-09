@@ -69,11 +69,53 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			})
 			it("should not gzip the file", () => {
 				expect(testData.headers)
-					.to.not.have.property("content-encoding")
+					.to.have.property("content-encoding", "deflate")
 			})
 			it("should return the expected data size", () => {
 				expect(testData.headers)
-					.to.have.property("content-length", "93")
+					.to.have.property("content-length", "70")
+			})
+			it("should return the expected data", async () => {
+				const response = testData.response
+				if(response == null) {
+					throw new Error("Response not set")
+				}
+
+				expect(await response.text())
+					.to.equal(
+`<!doctype html>
+
+<h1>Catchall page</h1>
+
+<div>some new value</div>
+<div>some new value</div>
+`
+					)
+			})
+		})
+
+		describe("asking for unknown file, accepting only brotli", () => {
+			beforeEach(async () => {
+				testData.encodings = [ "brotli" ]
+				const response = await fetch("/unknown", testData)
+				testData.response = response
+				testData.headers = getHeaders(response.headers)
+			})
+			it("should have status code 200", () => {
+				expect(testData.response)
+					.to.have.property("status", 200)
+			})
+			it("should have proper mime-type", () => {
+				expect(testData.headers)
+					.to.have.property("content-type", "text/html")
+			})
+			it("should brotli encode the file", () => {
+				expect(testData.headers)
+					.to.have.property("content-encoding", "br")
+			})
+			it("should return the expected data size", () => {
+				expect(testData.headers)
+					.to.have.property("content-length", "67")
 			})
 			it("should return the expected data", async () => {
 				const response = testData.response
@@ -108,13 +150,13 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				expect(testData.headers)
 					.to.have.property("content-type", "text/html")
 			})
-			it("should not gzip the file", () => {
+			it("should gzip the file", () => {
 				expect(testData.headers)
-					.to.not.have.property("content-encoding")
+					.to.have.property("content-encoding", "deflate")
 			})
 			it("should return the expected data size", () => {
 				expect(testData.headers)
-					.to.have.property("content-length", "93")
+					.to.have.property("content-length", "70")
 			})
 			it("should return the expected data", async () => {
 				const response = testData.response
