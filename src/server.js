@@ -88,6 +88,17 @@ module.exports = class Server {
 	) {
 		this.updateSetup(rootDir, setup)
 
+		// Preheating the env-replacements
+		const her = this.#handleEnvReplacements
+		Promise.all(this.#setup.files
+			.map(file => her(this.#setup, file))
+			.concat(her(this.#setup, this.#setup.catchAllFile))
+		).catch(error => {
+			// We log the error here and exists.
+			console.error(error.message)
+			process.exit(1)
+		})
+
 		this.#server = http.createServer(
 			// $FlowFixMe flow does not understand that it is OK for the handler to return promise
 			this.#onRequest)
