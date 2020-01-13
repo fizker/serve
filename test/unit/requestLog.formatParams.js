@@ -42,7 +42,7 @@ describe("unit/requestLog.formatString.js", () => {
 				requestTime: new Date("2019-12-31T12:40:15.05Z"),
 				responseTime: new Date("2019-12-31T12:40:15.100Z"),
 				httpMethod: "GET",
-				path: "/abc",
+				path: "/abc with spaces",
 				queryString: "?foo",
 				protocol: "HTTP/1.2",
 				statusCode: 200,
@@ -50,7 +50,7 @@ describe("unit/requestLog.formatString.js", () => {
 				referer: "http://foo",
 				userAgent: "UA",
 			},
-			expected: `1.2.3.4 - frank [31/Dec/2019:12:40:15 +0000] "GET /abc?foo HTTP/1.2" 200 1234 "http://foo" "UA" - [50 ms]`,
+			expected: `1.2.3.4 - frank [31/Dec/2019:12:40:15 +0000] "GET /abc%20with%20spaces?foo HTTP/1.2" 200 1234 "http://foo" "UA" - [50 ms]`,
 		},
 	]
 	for(const test of tests) {

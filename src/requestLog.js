@@ -41,7 +41,7 @@ function formatParams({
 		"-",
 		httpUser || "" || "-",
 		formatTime(requestTime),
-		`"${httpMethod} ${path}${queryString || ""} ${protocol}"`,
+		`"${httpMethod} ${encodeURI(path)}${queryString || ""} ${protocol}"`,
 		statusCode.toString(),
 		responseSize == null ? "-" : responseSize.toString(),
 		referer == null ? "-" : `"${referer}"`,
