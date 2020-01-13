@@ -9,7 +9,7 @@ import type { ServerSetup } from "../../index"
 
 const { Server } = require("../../index")
 
-let servers = []
+let singletonServer
 
 async function loadHTTPSFiles() {
 	const [ cert, key ] = await Promise.all([
@@ -23,10 +23,20 @@ async function loadHTTPSFiles() {
 module.exports = {
 	loadHTTPSFiles,
 
-	async start(rootDir/*: string*/, setup/*: ServerSetup*/, useHTTPS/*: boolean*/) /*: Promise<string>*/ {
+	async start(
+		rootDir/*: string*/,
+		setup/*: ServerSetup*/,
+		useHTTPS/*: boolean*/,
+		requestLog/*: (RequestLogParameters) => mixed*/ = () => {},
+	) /*: Promise<string>*/ {
+		if(singletonServer != null) {
+			throw new Error("Server already running")
+		}
+
 		const server = new Server(rootDir, setup, await loadHTTPSFiles())
+		singletonServer = server
 		await server.listen(12345, 12346)
-		servers.push(server)
+
 		return useHTTPS
 		? "https://localhost:12346"
 		: "http://localhost:12345"
@@ -34,6 +44,10 @@ module.exports = {
 }
 
 afterEach(async () => {
-	await Promise.all(servers.map(x => x.close()))
-	servers = []
+	if(singletonServer == null) {
+		return
+	}
+
+	await singletonServer.close()
+	singletonServer = null
 })
