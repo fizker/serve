@@ -1,11 +1,14 @@
 // @flow strict
 
 const { it, describe, beforeEach } = require("mocha")
-const { expect } = require("chai")
+const { expect, ...chai } = require("chai")
+const fzkes = require("fzkes")
 
 const { fetch, getHeaders, unwrap } = require("../fetch")
 const server = require("../server")
 const setup = require("./setup")
+
+chai.use(fzkes)
 
 /*::
 import { Response, Headers } from "node-fetch"
@@ -15,11 +18,14 @@ describe("integration/non-existing-files/test.js", () => {
 for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", () => {
 	let testData
 	beforeEach(async () => {
+		const requestLog = fzkes.fake("requestLog")
 		testData = {
-			base: await server.start(__dirname, setup, useHTTPS),
+			base: await server.start(__dirname, setup, useHTTPS, requestLog),
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),
+			requestLog,
+			requestLogPromise: new Promise((res) => requestLog.calls(res)),
 		}
 	})
 	describe("asking for missing file", () => {
@@ -31,7 +37,13 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			expect(testData.response)
 				.to.have.property("status", 500)
 		})
-		it("should log that the server reported an error")
+		it("should log that the server reported an error", async () => {
+			await testData.requestLogPromise
+			expect(testData.requestLog).to.have.been.calledWith({
+				statusCode: 500,
+				path: "/non-existing-file",
+			})
+		})
 
 		describe("then asking for existing file for missing file", () => {
 			beforeEach(async () => {

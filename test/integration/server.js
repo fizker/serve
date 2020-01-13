@@ -5,6 +5,7 @@ const path = require("path")
 
 /*::
 import type { ServerSetup } from "../../index"
+import type { RequestLogParameters } from "../../src/requestLog"
 */
 
 const { Server } = require("../../index")
@@ -33,7 +34,10 @@ module.exports = {
 			throw new Error("Server already running")
 		}
 
-		const server = new Server(rootDir, setup, await loadHTTPSFiles())
+		const server = new Server(rootDir, setup, {
+			...await loadHTTPSFiles(),
+			requestLog,
+		})
 		singletonServer = server
 		await server.listen(12345, 12346)
 
