@@ -10,15 +10,19 @@ const assertServerSetup = require("./assertServerSetup")
 const parseEncodingHeader = require("./parseEncodingHeader")
 const compress = require("./compress")
 const escapeRegex = require("./escapeRegex")
+const requestLog = require("./requestLog")
 
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
 
 import type { Alias, File, ServerSetup, Sizes } from "./types"
 import type { Encoding } from "./parseEncodingHeader"
+import type { RequestLogParameters } from "./requestLog"
 
 export type SetupProvider = () => Promise<{ rootDir: string, setup: ServerSetup }>
 export type FileProvider = (setup: ServerSetup, path: string) => Promise<?File>
+
+type RequestLog = (RequestLogParameters) => mixed
 */
 
 function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
@@ -81,13 +85,17 @@ module.exports = class Server {
 		}>,
 		...
 	}*/ = {}
+	#requestLog = requestLog
 
 	constructor(
 		rootDir/*: string*/,
 		setup/*: ServerSetup*/,
-		{ cert, key }/*: { cert: Buffer, key: Buffer }*/ = {},
+		{ requestLog, cert, key }/*: { requestLog?: RequestLog, cert?: Buffer, key?: Buffer }*/ = {},
 	) {
 		this.updateSetup(rootDir, setup)
+		if(requestLog != null) {
+			this.#requestLog = requestLog
+		}
 
 		// Preheating the env-replacements
 		const her = this.#handleEnvReplacements
@@ -129,6 +137,7 @@ module.exports = class Server {
 	}
 
 	#onRequest = async (req, res) => {
+		const startTime = new Date
 		const g = this.#getSetup
 		const setup = await g()
 
@@ -137,13 +146,35 @@ module.exports = class Server {
 		const parsedURL = new URL(req.url, "http://fake-base")
 		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
+		const logData = {
+			ip: req.socket.remoteAddress || "" || "-",
+			requestTime: startTime,
+			path: pathname,
+			queryString: parsedURL.search,
+			httpMethod: req.method,
+			httpUser: null,
+			protocol: `HTTP/${req.httpVersion}`,
+			referer: req.headers.referer || null,
+			userAgent: req.headers["user-agent"] || null,
+		}
+		const log = () => {
+			const length = res.getHeader("content-length")
+			const requestLog = this.#requestLog
+			requestLog({
+				...logData,
+				statusCode: res.statusCode,
+				responseSize: length == null ? null : Number(length),
+			})
+		}
+
 		const getFileForPath = this.#getFileForPath
 		const file = await getFileForPath(setup, pathname)
 
 		const addHeaders = this.#addHeaders
 		const writeErrorMessage = this.#writeErrorMessage
 		if(file == null) {
-			return writeErrorMessage(setup, res, 404, "Not found")
+			writeErrorMessage(setup, res, 404, "Not found")
+			log()
 		} else {
 			const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
 
@@ -169,8 +200,10 @@ module.exports = class Server {
 						.on("error", reject)
 					}))
 				}
+				log()
 			} catch(err) {
 				writeErrorMessage(setup, res, 500, "Server error")
+				log()
 			}
 		}
 	}

@@ -55,15 +55,18 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			},
 		}
 
+		const requestLog = fzkes.fake("requestLog")
 		testData = {
 			setup,
-			server: new Server(__dirname, setup, await loadHTTPSFiles()),
+			server: new Server(__dirname, setup, { ...await loadHTTPSFiles(), requestLog, }),
 			base: `${useHTTPS ? "https:" : "http:"}//localhost:${useHTTPS ? ports.https : ports.http}`,
 			encodings: [],
 			response: (null /*:?Response*/),
 			headers: (null /*:?{[string]: string, ...}*/),
 			setupProvider: (null /*?SetupProvider*/),
 			fileProvider: (null /*?FileProvider*/),
+			requestLog,
+			requestLogPromise: new Promise(res => requestLog.calls(res)),
 		}
 
 		await testData.server.listen(ports.http, ports.https)
@@ -97,6 +100,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				expect(testData.response)
 					.to.have.property("status", 404)
 			})
+			it("should log appropriately", async () => {
+				await testData.requestLogPromise
+				expect(testData.requestLog).to.have.been.calledWith({
+					statusCode: 404,
+					responseSize: 10,
+					path: "/other",
+					queryString: "",
+				})
+			})
 		})
 
 		describe("adding a file provider", () => {
@@ -120,6 +132,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				it("should have status code 404", () => {
 					expect(testData.response)
 						.to.have.property("status", 404)
+				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLog).to.have.been.calledWith({
+						statusCode: 404,
+						responseSize: 10,
+						path: "/first",
+						queryString: "",
+					})
 				})
 			})
 			describe("asking for /other", () => {
@@ -158,6 +179,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					expect(testData.response)
 						.to.have.property("status", 404)
 				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLog).to.have.been.calledWith({
+						statusCode: 404,
+						responseSize: 10,
+						path: "/initial",
+						queryString: "",
+					})
+				})
 			})
 			describe("asking for /other", () => {
 				beforeEach(async () => {
@@ -167,6 +197,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				it("should return the direct file and not the alias", async () => {
 					expect(await unwrap(testData.response).text())
 						.to.equal("'file content'\n")
+				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLog).to.have.been.calledWith({
+						statusCode: 200,
+						responseSize: 15,
+						path: "/other",
+						queryString: "",
+					})
 				})
 			})
 		})
@@ -204,6 +243,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						// $FlowFixMe flow does not know we override called()
 						.called(1)
 				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLog).to.have.been.calledWith({
+						statusCode: 404,
+						responseSize: 10,
+						path: "/initial",
+						queryString: "",
+					})
+				})
 
 				describe("asking for /initial", () => {
 					beforeEach(async () => {
@@ -214,6 +262,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 							.to.have.been
 							// $FlowFixMe flow does not know we override called()
 							.called(2)
+					})
+					it("should log appropriately", async () => {
+						await testData.requestLogPromise
+						expect(testData.requestLog).to.have.been.calledWith({
+							statusCode: 404,
+							responseSize: 10,
+							path: "/initial",
+							queryString: "",
+						})
 					})
 				})
 			})
@@ -231,6 +288,15 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						.to.have.been
 						// $FlowFixMe flow does not know we override called()
 						.called(1)
+				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLog).to.have.been.calledWith({
+						statusCode: 200,
+						responseSize: 15,
+						path: "/other",
+						queryString: "",
+					})
 				})
 			})
 		})

@@ -44,6 +44,7 @@ const agent = cert
 	.then(cert => new https.Agent({
 		rejectUnauthorized: false,
 		ca: cert,
+		keepAlive: false,
 	}))
 
 async function sendHTTP1(file /*: string*/, data /*: Data*/) /*: Promise<{ status: number, headers: Headers }>*/ {
