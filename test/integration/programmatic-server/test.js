@@ -49,6 +49,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					"headers": {},
 					"envReplacements": {
 					},
+					"hash": "abc",
 				},
 				{
 					"path": "/env-replacements",
@@ -64,6 +65,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					"envReplacements": {
 						"change": "FOO",
 					},
+					"hash": "abc",
 				},
 			],
 			"catchAllFile": null,
@@ -186,7 +188,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 
 			beforeEach(() => {
 				const secondFile/*: File*/ = testData.setup.files[0]
-				const updatedEnvReplacements = { ...testData.setup.files[1] }
+				const updatedEnvReplacements = { ...testData.setup.files[1], hash: "def" }
 				updatedEnvReplacements.sizes = { ...updatedEnvReplacements.sizes, identity: 12 }
 				testData.fileProvider = fzkes.fake()
 					.withComplexArgs(null, { value: "/first" }).returns(Promise.resolve(null))

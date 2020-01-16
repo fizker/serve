@@ -36,6 +36,7 @@ export type File = {
 	statusCode: number,
 	headers: Headers,
 	envReplacements: EnvReplacements,
+	hash: string,
 }
 
 export type ServerSetup = {

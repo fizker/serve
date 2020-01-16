@@ -37,7 +37,7 @@ function assertFile(val/*: mixed*/) /*: File*/ {
 		throw new Error("File must be object")
 	}
 
-	const { path, mime, statusCode, headers, sizes, envReplacements } = val
+	const { path, mime, statusCode, headers, sizes, envReplacements, hash } = val
 
 	const p = assertString(path, "path")
 	if(p[0] !== "/") {
@@ -70,6 +70,7 @@ function assertFile(val/*: mixed*/) /*: File*/ {
 			deflate: assertIntOrNull(sizes.deflate, "sizes.deflate"),
 		},
 		envReplacements: assertEnvReplacements(envReplacements),
+		hash: assertString(hash, "hash"),
 	}
 }
 

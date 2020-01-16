@@ -27,6 +27,7 @@ module.exports = ({
 			"envReplacements": {
 				"Some content": "ENV_VAR",
 			},
+			"hash": "abc",
 		},
 		{
 			"path": "/regex-chars.html",
@@ -42,6 +43,7 @@ module.exports = ({
 			"envReplacements": {
 				"${regex key}": "ENV_VAR",
 			},
+			"hash": "abc",
 		},
 	],
 	"catchAllFile": {
@@ -58,6 +60,7 @@ module.exports = ({
 		"envReplacements": {
 			"Some content": "ENV_VAR",
 		},
+		"hash": "abc",
 	},
 	"globalHeaders": {},
 }/*:ServerSetup*/)

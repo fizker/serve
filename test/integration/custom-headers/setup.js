@@ -33,6 +33,7 @@ module.exports = ({
 			},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 		{
 			"path": "/file-with-overlapping-header",
@@ -49,6 +50,7 @@ module.exports = ({
 			},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 	],
 	"catchAllFile": {
@@ -67,6 +69,7 @@ module.exports = ({
 		},
 		"envReplacements": {
 		},
+		"hash": "abc",
 	},
 	"globalHeaders": {
 		"x-shared-header": "global value",
