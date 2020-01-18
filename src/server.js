@@ -15,7 +15,7 @@ const requestLog = require("./requestLog")
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
 
-import type { Alias, File, ServerSetup, Sizes } from "./types"
+import type { Alias, File, ServerSetup, Sizes, EnvReplacements } from "./types"
 import type { Encoding } from "./parseEncodingHeader"
 import type { RequestLogParameters } from "./requestLog"
 
@@ -78,10 +78,14 @@ module.exports = class Server {
 	#secureServer/*: ?http$Server */
 	#cachedFiles/*: {
 		[path: string]: Promise<{
-			identity: string,
-			brotli: Buffer,
-			gzip: Buffer,
-			deflate: Buffer,
+			content: {
+				identity: string,
+				brotli: Buffer,
+				gzip: Buffer,
+				deflate: Buffer,
+			},
+			hash: string,
+			envReplacements: EnvReplacements,
 		}>,
 		...
 	}*/ = {}
@@ -190,8 +194,8 @@ module.exports = class Server {
 
 			try {
 				if(this.#cachedFiles[file.path] != null) {
-					const content = await this.#cachedFiles[file.path]
-					res.end(content[smallestEncoding.name])
+					const cachedFile = await this.#cachedFiles[file.path]
+					res.end(cachedFile.content[smallestEncoding.name])
 				} else {
 					const filepath = path.join(setup.folders[smallestEncoding.name], file.path)
 					await fs.promises.open(filepath).then(fd => new Promise((resolve, reject) => {
@@ -246,6 +250,23 @@ module.exports = class Server {
 			return file
 		}
 
+		if(this.#cachedFiles[file.path] != null) {
+			const cachedFile = await this.#cachedFiles[file.path]
+			if(file.hash !== cachedFile.hash) {
+				delete this.#cachedFiles[file.path]
+			} else {
+				const fileKeys = Object.keys(rep)
+				const cacheKeys = Object.keys(cachedFile.envReplacements)
+				if(
+					fileKeys.length != cacheKeys.length
+					|| !fileKeys.every(x => cacheKeys.includes(x))
+					|| !fileKeys.every(x => rep[x] === cachedFile.envReplacements[x])
+				) {
+					delete this.#cachedFiles[file.path]
+				}
+			}
+		}
+
 		if(this.#cachedFiles[file.path] == null) {
 			this.#cachedFiles[file.path] = fs.promises.readFile(path.join(setup.folders.identity, file.path), "utf-8")
 				.then((content) => content.replace(
@@ -265,19 +286,23 @@ module.exports = class Server {
 						compress("deflate", identity),
 					])
 
-					return { identity, gzip, brotli, deflate }
+					return {
+						hash: file.hash,
+						envReplacements: rep,
+						content: { identity, gzip, brotli, deflate },
+					}
 				})
 		}
 
-		const content = await this.#cachedFiles[file.path]
+		const cachedFile = await this.#cachedFiles[file.path]
 
 		return {
 			...file,
 			sizes: {
-				identity: content.identity.length,
-				brotli: content.brotli.length,
-				deflate: content.deflate.length,
-				gzip: content.gzip.length,
+				identity: cachedFile.content.identity.length,
+				brotli: cachedFile.content.brotli.length,
+				deflate: cachedFile.content.deflate.length,
+				gzip: cachedFile.content.gzip.length,
 			},
 		}
 	}
