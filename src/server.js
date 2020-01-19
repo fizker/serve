@@ -132,11 +132,18 @@ module.exports = class Server {
 			process.exit(1)
 		})
 
-		this.#server = http.createServer(
-			// $FlowFixMe flow does not understand that it is OK for the handler to return promise
-			this.#onRequest)
+		const onRequest = this.#onRequest
+		this.#server = http.createServer((...args) => {
+			onRequest(...args).catch(error => {
+				logger({ type: "error", message: error.message })
+			})
+		})
 		if(cert && key) {
-			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, this.#onRequest)
+			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, (...args) => {
+				onRequest(...args).catch(error => {
+					logger({ type: "error", message: error.message })
+				})
+			})
 		}
 	}
 
