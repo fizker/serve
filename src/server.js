@@ -13,7 +13,7 @@ const escapeRegex = require("./escapeRegex")
 const { requestLogFactory } = require("./requestLog")
 
 /*::
-import type { Server as http$Server, ServerResponse } from "http"
+import type { Server as http$Server, ServerResponse, IncomingMessage } from "http"
 
 import type { Alias, File, ServerSetup, Sizes, EnvReplacements } from "./types"
 import type { Encoding } from "./parseEncodingHeader"
@@ -25,6 +25,11 @@ export type FileProvider = (setup: ServerSetup, path: string) => Promise<?File>
 type RequestLogFactory = (RequestLogParameters) => string
 type Logger = ({ type: "error" | "info" | "request", message: string }) => mixed
 */
+
+const standardErrors = {
+	"404": "Not found",
+	"500": "Internal server error",
+}
 
 const logger/*: Logger*/ = ({ type, message }) => {
 	if(type === "request") {
@@ -133,15 +138,21 @@ module.exports = class Server {
 		})
 
 		const onRequest = this.#onRequest
-		this.#server = http.createServer((...args) => {
-			onRequest(...args).catch(error => {
+		this.#server = http.createServer((req, res) => {
+			const startTime = new Date
+			onRequest(startTime, req, res).catch(error => {
 				logger({ type: "error", message: error.message })
+				const writeErrorMessage = this.#writeErrorMessage
+				writeErrorMessage(setup, startTime, req, res, 500)
 			})
 		})
 		if(cert && key) {
-			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, (...args) => {
-				onRequest(...args).catch(error => {
+			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, (req, res) => {
+				const startTime = new Date
+				onRequest(startTime, req, res).catch(error => {
 					logger({ type: "error", message: error.message })
+					const writeErrorMessage = this.#writeErrorMessage
+					writeErrorMessage(setup, startTime, req, res, 500)
 				})
 			})
 		}
@@ -167,8 +178,30 @@ module.exports = class Server {
 		return normalizeFolders(rootDir, assertServerSetup(setup))
 	}
 
-	#onRequest = async (req, res) => {
-		const startTime = new Date
+	#logRequest = (startTime/*: Date*/, req/*: IncomingMessage*/, res/*: ServerResponse*/) => {
+		const parsedURL = new URL(req.url, "http://fake-base")
+
+		const length = res.getHeader("content-length")
+		const rlf = this.#requestLogFactory
+		const log = rlf({
+			ip: req.socket.remoteAddress || "" || "-",
+			requestTime: startTime,
+			path: decodeURI(parsedURL.pathname || "" || "/"),
+			queryString: parsedURL.search,
+			httpMethod: req.method,
+			httpUser: null,
+			protocol: `HTTP/${req.httpVersion}`,
+			referer: req.headers.referer || null,
+			userAgent: req.headers["user-agent"] || null,
+
+			statusCode: res.statusCode,
+			responseSize: length == null ? null : Number(length),
+		})
+		const logger = this.#logger
+		logger({ type: "request", message: log })
+	}
+
+	#onRequest = async (startTime/*: Date*/, req/*: IncomingMessage*/, res/*: ServerResponse*/) => {
 		const g = this.#getSetup
 		const setup = await g()
 
@@ -177,27 +210,9 @@ module.exports = class Server {
 		const parsedURL = new URL(req.url, "http://fake-base")
 		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
-		const logData = {
-			ip: req.socket.remoteAddress || "" || "-",
-			requestTime: startTime,
-			path: pathname,
-			queryString: parsedURL.search,
-			httpMethod: req.method,
-			httpUser: null,
-			protocol: `HTTP/${req.httpVersion}`,
-			referer: req.headers.referer || null,
-			userAgent: req.headers["user-agent"] || null,
-		}
 		const log = () => {
-			const length = res.getHeader("content-length")
-			const rlf = this.#requestLogFactory
-			const log = rlf({
-				...logData,
-				statusCode: res.statusCode,
-				responseSize: length == null ? null : Number(length),
-			})
-			const logger = this.#logger
-			logger({ type: "request", message: log })
+			const logRequest = this.#logRequest
+			logRequest(startTime, req, res)
 		}
 
 		const getFileForPath = this.#getFileForPath
@@ -206,8 +221,7 @@ module.exports = class Server {
 		const addHeaders = this.#addHeaders
 		const writeErrorMessage = this.#writeErrorMessage
 		if(file == null) {
-			writeErrorMessage(setup, res, 404, "Not found")
-			log()
+			writeErrorMessage(setup, startTime, req, res, 404)
 		} else {
 			const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
 
@@ -235,19 +249,21 @@ module.exports = class Server {
 				}
 				log()
 			} catch(err) {
-				writeErrorMessage(setup, res, 500, "Server error")
-				log()
+				writeErrorMessage(setup, startTime, req, res, 500)
 			}
 		}
 	}
 
-	#writeErrorMessage = (setup/*: ServerSetup*/, res/*: ServerResponse*/, status/*: number*/, message/*: string*/) => {
+	#writeErrorMessage = (setup/*: ServerSetup*/, startTime/*: Date*/, req/*: IncomingMessage*/, res/*: ServerResponse*/, status/*: 404|500*/) => {
+		const message = standardErrors[status]
 		const addHeaders = this.#addHeaders
 		addHeaders(res, setup.globalHeaders)
 		res.statusCode = status
 		res.setHeader("content-length", `${message.length + 1}`)
 		res.setHeader("Content-Type", "text/plain")
 		res.end(message + "\n")
+		const logRequest = this.#logRequest
+		logRequest(startTime, req, res)
 	}
 
 	#addHeaders = (res/*: ServerResponse*/, headers/*:{[string]: string, ...}*/) => {

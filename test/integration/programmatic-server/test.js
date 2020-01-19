@@ -91,6 +91,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			originalFile: (null /*: ?string*/),
 			requestLogFactory,
 			requestLogPromise: new Promise(res => requestLogFactory.calls(res)),
+			logger,
 		}
 
 		await testData.server.listen(ports.http, ports.https)
@@ -245,6 +246,62 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				it("should return the file", async () => {
 					expect(await unwrap(testData.response).text())
 						.to.equal("FOO2 more\n")
+				})
+			})
+			describe("asking for file with non-existing env-replacements", () => {
+				beforeEach(async () => {
+					const file/*: File*/ = {
+						path: "/missing-env",
+						hash: "abc",
+						sizes: {
+							identity: 10,
+							brotli: null,
+							gzip: null,
+							deflate: null,
+						},
+						statusCode: 200,
+						mime: "text/plain",
+						headers: {},
+						envReplacements: {
+							"some string": "unknown-env",
+						},
+					}
+					// $FlowFixMe
+					testData.fileProvider
+						.withComplexArgs(null, { value: "/missing-env" })
+						.returns(Promise.resolve(file))
+
+					const response = await fetch("/missing-env", testData)
+					testData.response = response
+					testData.headers = getHeaders(response.headers)
+				})
+
+				it("should have status code 500", () => {
+					expect(testData.response)
+						.to.have.property("status", 500)
+				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLogFactory).to.have.been.calledWith({
+						statusCode: 500,
+						responseSize: 22,
+						path: "/missing-env",
+						queryString: "",
+					})
+				})
+				it("should log that the env-var is missing", async () => {
+					await testData.requestLogPromise
+					const lastCalls = testData.logger._calls.map(x => x[0])
+					const errorLog = lastCalls.find(x => x.type === "error")
+
+					if(errorLog == null) {
+						throw new Error("Error-log missing")
+					}
+
+					expect(errorLog.message)
+						.to.match(/\Wenv\W/i)
+					expect(errorLog.message)
+						.to.include("unknown-env")
 				})
 			})
 		})
