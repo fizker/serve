@@ -27,6 +27,7 @@ module.exports = ({
 			},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 		{
 			"path": "/non-existing-file",
@@ -42,6 +43,7 @@ module.exports = ({
 			},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 	],
 	"catchAllFile": null,

@@ -31,6 +31,7 @@ module.exports = ({
 			"headers": {},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 		{
 			"path": "/index.html",
@@ -45,6 +46,7 @@ module.exports = ({
 			"headers": {},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		}
 	],
 	"catchAllFile": null,

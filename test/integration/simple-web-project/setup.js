@@ -26,6 +26,7 @@ module.exports = ({
 			"headers": {},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 		{
 			"path": "/uncompressable.txt",
@@ -40,6 +41,7 @@ module.exports = ({
 			"headers": {},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 		{
 			"path": "/file with spaces.txt",
@@ -54,6 +56,7 @@ module.exports = ({
 			"headers": {},
 			"envReplacements": {
 			},
+			"hash": "abc",
 		},
 	],
 	"catchAllFile": {
@@ -69,6 +72,7 @@ module.exports = ({
 		"headers": {},
 		"envReplacements": {
 		},
+		"hash": "abc",
 	},
 	"globalHeaders": {},
 }/*:ServerSetup*/)
