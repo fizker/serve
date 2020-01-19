@@ -297,6 +297,7 @@ module.exports = class Server {
 		}
 
 		if(this.#cachedFiles[file.path] == null) {
+			const logger = this.#logger
 			this.#cachedFiles[file.path] = fs.promises.readFile(path.join(setup.folders.identity, file.path), "utf-8")
 				.then((content) => content.replace(
 					new RegExp(`(${e.map(x => escapeRegex(x.text)).join("|")})`, "g"),
@@ -321,6 +322,19 @@ module.exports = class Server {
 						content: { identity, gzip, brotli, deflate },
 					}
 				})
+				.then(
+					(result) => {
+						logger({ type: "info", message: `Replaced variables in file ${file.path}` })
+						return result
+					},
+					(error) => {
+						logger({
+							type: "error",
+							message: `Could not replace env-variables in file ${file.path}. Error: ${error.message}`,
+						})
+						throw error
+					},
+				)
 		}
 
 		const cachedFile = await this.#cachedFiles[file.path]
