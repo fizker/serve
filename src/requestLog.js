@@ -17,11 +17,7 @@ export type RequestLogParameters = {
 }
 */
 
-module.exports = function requestLog(params/*: RequestLogParameters*/) {
-	console.log(formatParams(params))
-}
-
-function formatParams({
+function requestLogFactory({
 	ip,
 	httpUser,
 	requestTime,
@@ -66,6 +62,7 @@ function getMonthName(month/*: number*/) /*: string*/ {
 	return months[month] || "Jan"
 }
 
-// Exposed for testing
-module.exports.formatParams = formatParams
-module.exports.formatTime = formatTime
+module.exports = {
+	requestLogFactory,
+	formatTime,
+}

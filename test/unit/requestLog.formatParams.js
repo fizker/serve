@@ -2,7 +2,7 @@
 
 const { describe, it, beforeEach } = require("mocha")
 const { expect } = require("chai")
-const { formatParams } = require("../../src/requestLog")
+const { requestLogFactory: formatParams } = require("../../src/requestLog")
 
 /*::
 import type { RequestLogParameters } from "../../src/requestLog"

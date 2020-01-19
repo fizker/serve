@@ -10,7 +10,7 @@ const assertServerSetup = require("./assertServerSetup")
 const parseEncodingHeader = require("./parseEncodingHeader")
 const compress = require("./compress")
 const escapeRegex = require("./escapeRegex")
-const requestLog = require("./requestLog")
+const { requestLogFactory } = require("./requestLog")
 
 /*::
 import type { Server as http$Server, ServerResponse } from "http"
@@ -22,8 +22,17 @@ import type { RequestLogParameters } from "./requestLog"
 export type SetupProvider = () => Promise<{ rootDir: string, setup: ServerSetup }>
 export type FileProvider = (setup: ServerSetup, path: string) => Promise<?File>
 
-type RequestLog = (RequestLogParameters) => mixed
+type RequestLogFactory = (RequestLogParameters) => string
+type Logger = ({ type: "error" | "info" | "request", message: string }) => mixed
 */
+
+const logger/*: Logger*/ = ({ type, message }) => {
+	if(type === "request") {
+		console.log(message)
+	} else {
+		console.error(`${type}: ${message}`)
+	}
+}
 
 function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
 	return {
@@ -89,17 +98,28 @@ module.exports = class Server {
 		}>,
 		...
 	}*/ = {}
-	#requestLog = requestLog
+	#requestLogFactory/*: RequestLogFactory*/ = requestLogFactory
+	#logger/*: Logger*/ = logger
 
 	constructor(
 		rootDir/*: string*/,
 		setup/*: ServerSetup*/,
-		{ requestLog, cert, key }/*: { requestLog?: RequestLog, cert?: Buffer, key?: Buffer }*/ = {},
+		{ requestLogFactory, logger: maybeLogger, cert, key }/*: {
+			requestLogFactory?: RequestLogFactory,
+			logger?: Logger,
+			cert?: Buffer,
+			key?: Buffer,
+		}*/ = {},
 	) {
 		this.updateSetup(rootDir, setup)
-		if(requestLog != null) {
-			this.#requestLog = requestLog
+		if(requestLogFactory != null) {
+			this.#requestLogFactory = requestLogFactory
 		}
+		if(maybeLogger != null) {
+			this.#logger = maybeLogger
+		}
+
+		const logger = this.#logger
 
 		// Preheating the env-replacements
 		const her = this.#handleEnvReplacements
@@ -108,7 +128,7 @@ module.exports = class Server {
 			.concat(her(this.#setup, this.#setup.catchAllFile))
 		).catch(error => {
 			// We log the error here and exists.
-			console.error(error.message)
+			logger({ type: "error", message: error.message })
 			process.exit(1)
 		})
 
@@ -163,12 +183,14 @@ module.exports = class Server {
 		}
 		const log = () => {
 			const length = res.getHeader("content-length")
-			const requestLog = this.#requestLog
-			requestLog({
+			const rlf = this.#requestLogFactory
+			const log = rlf({
 				...logData,
 				statusCode: res.statusCode,
 				responseSize: length == null ? null : Number(length),
 			})
+			const logger = this.#logger
+			logger({ type: "request", message: log })
 		}
 
 		const getFileForPath = this.#getFileForPath
