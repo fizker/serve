@@ -28,7 +28,7 @@ module.exports = {
 		rootDir/*: string*/,
 		setup/*: ServerSetup*/,
 		useHTTPS/*: boolean*/,
-		requestLog/*: (RequestLogParameters) => mixed*/ = () => {},
+		requestLogFactory/*: (RequestLogParameters) => string*/ = () => "",
 	) /*: Promise<string>*/ {
 		if(singletonServer != null) {
 			throw new Error("Server already running")
@@ -36,7 +36,8 @@ module.exports = {
 
 		const server = new Server(rootDir, setup, {
 			...await loadHTTPSFiles(),
-			requestLog,
+			requestLogFactory,
+			logger: () => {},
 		})
 		singletonServer = server
 		await server.listen(12345, 12346)

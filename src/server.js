@@ -10,10 +10,10 @@ const assertServerSetup = require("./assertServerSetup")
 const parseEncodingHeader = require("./parseEncodingHeader")
 const compress = require("./compress")
 const escapeRegex = require("./escapeRegex")
-const requestLog = require("./requestLog")
+const { requestLogFactory } = require("./requestLog")
 
 /*::
-import type { Server as http$Server, ServerResponse } from "http"
+import type { Server as http$Server, ServerResponse, IncomingMessage } from "http"
 
 import type { Alias, File, ServerSetup, Sizes, EnvReplacements } from "./types"
 import type { Encoding } from "./parseEncodingHeader"
@@ -22,8 +22,22 @@ import type { RequestLogParameters } from "./requestLog"
 export type SetupProvider = () => Promise<{ rootDir: string, setup: ServerSetup }>
 export type FileProvider = (setup: ServerSetup, path: string) => Promise<?File>
 
-type RequestLog = (RequestLogParameters) => mixed
+type RequestLogFactory = (RequestLogParameters) => string
+type Logger = ({ type: "error" | "info" | "request", message: string }) => mixed
 */
+
+const standardErrors = {
+	"404": "Not found",
+	"500": "Internal server error",
+}
+
+const logger/*: Logger*/ = ({ type, message }) => {
+	if(type === "request") {
+		console.log(message)
+	} else {
+		console.error(`${type}: ${message}`)
+	}
+}
 
 function normalizeFolders(rootDir/*: string*/, setup/*: ServerSetup*/) /*: ServerSetup*/ {
 	return {
@@ -89,17 +103,28 @@ module.exports = class Server {
 		}>,
 		...
 	}*/ = {}
-	#requestLog = requestLog
+	#requestLogFactory/*: RequestLogFactory*/ = requestLogFactory
+	#logger/*: Logger*/ = logger
 
 	constructor(
 		rootDir/*: string*/,
 		setup/*: ServerSetup*/,
-		{ requestLog, cert, key }/*: { requestLog?: RequestLog, cert?: Buffer, key?: Buffer }*/ = {},
+		{ requestLogFactory, logger: maybeLogger, cert, key }/*: {
+			requestLogFactory?: RequestLogFactory,
+			logger?: Logger,
+			cert?: Buffer,
+			key?: Buffer,
+		}*/ = {},
 	) {
 		this.updateSetup(rootDir, setup)
-		if(requestLog != null) {
-			this.#requestLog = requestLog
+		if(requestLogFactory != null) {
+			this.#requestLogFactory = requestLogFactory
 		}
+		if(maybeLogger != null) {
+			this.#logger = maybeLogger
+		}
+
+		const logger = this.#logger
 
 		// Preheating the env-replacements
 		const her = this.#handleEnvReplacements
@@ -108,15 +133,28 @@ module.exports = class Server {
 			.concat(her(this.#setup, this.#setup.catchAllFile))
 		).catch(error => {
 			// We log the error here and exists.
-			console.error(error.message)
+			logger({ type: "error", message: error.message })
 			process.exit(1)
 		})
 
-		this.#server = http.createServer(
-			// $FlowFixMe flow does not understand that it is OK for the handler to return promise
-			this.#onRequest)
+		const onRequest = this.#onRequest
+		this.#server = http.createServer((req, res) => {
+			const startTime = new Date
+			onRequest(startTime, req, res).catch(error => {
+				logger({ type: "error", message: error.message })
+				const writeErrorMessage = this.#writeErrorMessage
+				writeErrorMessage(setup, startTime, req, res, 500)
+			})
+		})
 		if(cert && key) {
-			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, this.#onRequest)
+			this.#secureServer = http2.createSecureServer({ cert, key, allowHTTP1: true }, (req, res) => {
+				const startTime = new Date
+				onRequest(startTime, req, res).catch(error => {
+					logger({ type: "error", message: error.message })
+					const writeErrorMessage = this.#writeErrorMessage
+					writeErrorMessage(setup, startTime, req, res, 500)
+				})
+			})
 		}
 	}
 
@@ -140,8 +178,30 @@ module.exports = class Server {
 		return normalizeFolders(rootDir, assertServerSetup(setup))
 	}
 
-	#onRequest = async (req, res) => {
-		const startTime = new Date
+	#logRequest = (startTime/*: Date*/, req/*: IncomingMessage*/, res/*: ServerResponse*/) => {
+		const parsedURL = new URL(req.url, "http://fake-base")
+
+		const length = res.getHeader("content-length")
+		const rlf = this.#requestLogFactory
+		const log = rlf({
+			ip: req.socket.remoteAddress || "" || "-",
+			requestTime: startTime,
+			path: decodeURI(parsedURL.pathname || "" || "/"),
+			queryString: parsedURL.search,
+			httpMethod: req.method,
+			httpUser: null,
+			protocol: `HTTP/${req.httpVersion}`,
+			referer: req.headers.referer || null,
+			userAgent: req.headers["user-agent"] || null,
+
+			statusCode: res.statusCode,
+			responseSize: length == null ? null : Number(length),
+		})
+		const logger = this.#logger
+		logger({ type: "request", message: log })
+	}
+
+	#onRequest = async (startTime/*: Date*/, req/*: IncomingMessage*/, res/*: ServerResponse*/) => {
 		const g = this.#getSetup
 		const setup = await g()
 
@@ -150,25 +210,9 @@ module.exports = class Server {
 		const parsedURL = new URL(req.url, "http://fake-base")
 		const pathname = decodeURI(parsedURL.pathname || "" || "/")
 
-		const logData = {
-			ip: req.socket.remoteAddress || "" || "-",
-			requestTime: startTime,
-			path: pathname,
-			queryString: parsedURL.search,
-			httpMethod: req.method,
-			httpUser: null,
-			protocol: `HTTP/${req.httpVersion}`,
-			referer: req.headers.referer || null,
-			userAgent: req.headers["user-agent"] || null,
-		}
 		const log = () => {
-			const length = res.getHeader("content-length")
-			const requestLog = this.#requestLog
-			requestLog({
-				...logData,
-				statusCode: res.statusCode,
-				responseSize: length == null ? null : Number(length),
-			})
+			const logRequest = this.#logRequest
+			logRequest(startTime, req, res)
 		}
 
 		const getFileForPath = this.#getFileForPath
@@ -177,8 +221,7 @@ module.exports = class Server {
 		const addHeaders = this.#addHeaders
 		const writeErrorMessage = this.#writeErrorMessage
 		if(file == null) {
-			writeErrorMessage(setup, res, 404, "Not found")
-			log()
+			writeErrorMessage(setup, startTime, req, res, 404)
 		} else {
 			const smallestEncoding = getPreferredEncoding(acceptedEncodings, file.sizes)
 
@@ -206,19 +249,21 @@ module.exports = class Server {
 				}
 				log()
 			} catch(err) {
-				writeErrorMessage(setup, res, 500, "Server error")
-				log()
+				writeErrorMessage(setup, startTime, req, res, 500)
 			}
 		}
 	}
 
-	#writeErrorMessage = (setup/*: ServerSetup*/, res/*: ServerResponse*/, status/*: number*/, message/*: string*/) => {
+	#writeErrorMessage = (setup/*: ServerSetup*/, startTime/*: Date*/, req/*: IncomingMessage*/, res/*: ServerResponse*/, status/*: 404|500*/) => {
+		const message = standardErrors[status]
 		const addHeaders = this.#addHeaders
 		addHeaders(res, setup.globalHeaders)
 		res.statusCode = status
 		res.setHeader("content-length", `${message.length + 1}`)
 		res.setHeader("Content-Type", "text/plain")
 		res.end(message + "\n")
+		const logRequest = this.#logRequest
+		logRequest(startTime, req, res)
 	}
 
 	#addHeaders = (res/*: ServerResponse*/, headers/*:{[string]: string, ...}*/) => {
@@ -268,6 +313,7 @@ module.exports = class Server {
 		}
 
 		if(this.#cachedFiles[file.path] == null) {
+			const logger = this.#logger
 			this.#cachedFiles[file.path] = fs.promises.readFile(path.join(setup.folders.identity, file.path), "utf-8")
 				.then((content) => content.replace(
 					new RegExp(`(${e.map(x => escapeRegex(x.text)).join("|")})`, "g"),
@@ -292,6 +338,19 @@ module.exports = class Server {
 						content: { identity, gzip, brotli, deflate },
 					}
 				})
+				.then(
+					(result) => {
+						logger({ type: "info", message: `Replaced variables in file ${file.path}` })
+						return result
+					},
+					(error) => {
+						logger({
+							type: "error",
+							message: `Could not replace env-variables in file ${file.path}. Error: ${error.message}`,
+						})
+						throw error
+					},
+				)
 		}
 
 		const cachedFile = await this.#cachedFiles[file.path]

@@ -76,10 +76,11 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 		process.env.FOO = "FOO2"
 		process.env.BAR = "BAR2"
 
-		const requestLog = fzkes.fake("requestLog")
+		const requestLogFactory = fzkes.fake("requestLogFactory").returns("request-log")
+		const logger = fzkes.fake("logger")
 		testData = {
 			setup,
-			server: new Server(__dirname, setup, { ...await loadHTTPSFiles(), requestLog, }),
+			server: new Server(__dirname, setup, { ...await loadHTTPSFiles(), requestLogFactory, logger }),
 			base: `${useHTTPS ? "https:" : "http:"}//localhost:${useHTTPS ? ports.https : ports.http}`,
 			encodings: [],
 			response: (null /*:?Response*/),
@@ -88,8 +89,9 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			fileProvider: (null /*: ?FileProvider*/),
 			filepath: (null /*: ?string*/),
 			originalFile: (null /*: ?string*/),
-			requestLog,
-			requestLogPromise: new Promise(res => requestLog.calls(res)),
+			requestLogFactory,
+			requestLogPromise: new Promise(res => requestLogFactory.calls(res)),
+			logger,
 		}
 
 		await testData.server.listen(ports.http, ports.https)
@@ -128,7 +130,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			})
 			it("should log appropriately", async () => {
 				await testData.requestLogPromise
-				expect(testData.requestLog).to.have.been.calledWith({
+				expect(testData.requestLogFactory).to.have.been.calledWith({
 					statusCode: 404,
 					responseSize: 10,
 					path: "/other",
@@ -157,7 +159,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			beforeEach(async () => {
 				// We are requesting the items first, to ensure that any caches are filled
 				let i = 0
-				testData.requestLogPromise = new Promise(res => testData.requestLog.calls(() => {
+				testData.requestLogPromise = new Promise(res => testData.requestLogFactory.calls(() => {
 					i++
 					if(i === 3) {
 						res()
@@ -169,8 +171,8 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					fetch("/env-replacements", testData),
 					testData.requestLogPromise,
 				])
-				testData.requestLog.reset()
-				testData.requestLogPromise = new Promise(res => testData.requestLog.calls(res))
+				testData.requestLogFactory.reset()
+				testData.requestLogPromise = new Promise(res => testData.requestLogFactory.calls(res))
 			})
 
 			beforeEach(async () => {
@@ -212,7 +214,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				})
 				it("should log appropriately", async () => {
 					await testData.requestLogPromise
-					expect(testData.requestLog).to.have.been.calledWith({
+					expect(testData.requestLogFactory).to.have.been.calledWith({
 						statusCode: 404,
 						responseSize: 10,
 						path: "/first",
@@ -246,13 +248,69 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 						.to.equal("FOO2 more\n")
 				})
 			})
+			describe("asking for file with non-existing env-replacements", () => {
+				beforeEach(async () => {
+					const file/*: File*/ = {
+						path: "/missing-env",
+						hash: "abc",
+						sizes: {
+							identity: 10,
+							brotli: null,
+							gzip: null,
+							deflate: null,
+						},
+						statusCode: 200,
+						mime: "text/plain",
+						headers: {},
+						envReplacements: {
+							"some string": "unknown-env",
+						},
+					}
+					// $FlowFixMe
+					testData.fileProvider
+						.withComplexArgs(null, { value: "/missing-env" })
+						.returns(Promise.resolve(file))
+
+					const response = await fetch("/missing-env", testData)
+					testData.response = response
+					testData.headers = getHeaders(response.headers)
+				})
+
+				it("should have status code 500", () => {
+					expect(testData.response)
+						.to.have.property("status", 500)
+				})
+				it("should log appropriately", async () => {
+					await testData.requestLogPromise
+					expect(testData.requestLogFactory).to.have.been.calledWith({
+						statusCode: 500,
+						responseSize: 22,
+						path: "/missing-env",
+						queryString: "",
+					})
+				})
+				it("should log that the env-var is missing", async () => {
+					await testData.requestLogPromise
+					const lastCalls = testData.logger._calls.map(x => x[0])
+					const errorLog = lastCalls.find(x => x.type === "error")
+
+					if(errorLog == null) {
+						throw new Error("Error-log missing")
+					}
+
+					expect(errorLog.message)
+						.to.match(/\Wenv\W/i)
+					expect(errorLog.message)
+						.to.include("unknown-env")
+				})
+			})
 		})
 
 		describe("updating the server", () => {
 			beforeEach(async () => {
 				// We are requesting the items first, to ensure that any caches are filled
 				let i = 0
-				testData.requestLogPromise = new Promise(res => testData.requestLog.calls(() => {
+				testData.requestLogPromise = new Promise(res => testData.requestLogFactory.calls(() => {
 					i++
 					if(i === 3) {
 						res()
@@ -264,8 +322,8 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					fetch("/env-replacements", testData),
 					testData.requestLogPromise,
 				])
-				testData.requestLog.reset()
-				testData.requestLogPromise = new Promise(res => testData.requestLog.calls(res))
+				testData.requestLogFactory.reset()
+				testData.requestLogPromise = new Promise(res => testData.requestLogFactory.calls(res))
 			})
 			beforeEach(() => {
 				const newSetup = {
@@ -292,7 +350,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				})
 				it("should log appropriately", async () => {
 					await testData.requestLogPromise
-					expect(testData.requestLog).to.have.been.calledWith({
+					expect(testData.requestLogFactory).to.have.been.calledWith({
 						statusCode: 404,
 						responseSize: 10,
 						path: "/initial",
@@ -311,7 +369,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				})
 				it("should log appropriately", async () => {
 					await testData.requestLogPromise
-					expect(testData.requestLog).to.have.been.calledWith({
+					expect(testData.requestLogFactory).to.have.been.calledWith({
 						statusCode: 200,
 						responseSize: 15,
 						path: "/other",
@@ -325,7 +383,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 			beforeEach(async () => {
 				// We are requesting the items first, to ensure that any caches are filled
 				let i = 0
-				testData.requestLogPromise = new Promise(res => testData.requestLog.calls(() => {
+				testData.requestLogPromise = new Promise(res => testData.requestLogFactory.calls(() => {
 					i++
 					if(i === 3) {
 						res()
@@ -337,8 +395,8 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					fetch("/env-replacements", testData),
 					testData.requestLogPromise,
 				])
-				testData.requestLog.reset()
-				testData.requestLogPromise = new Promise(res => testData.requestLog.calls(res))
+				testData.requestLogFactory.reset()
+				testData.requestLogPromise = new Promise(res => testData.requestLogFactory.calls(res))
 			})
 			beforeEach(() => {
 				// The difference is the alias and the envReplacements map
@@ -384,7 +442,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				})
 				it("should log appropriately", async () => {
 					await testData.requestLogPromise
-					expect(testData.requestLog).to.have.been.calledWith({
+					expect(testData.requestLogFactory).to.have.been.calledWith({
 						statusCode: 404,
 						responseSize: 10,
 						path: "/initial",
@@ -404,7 +462,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					})
 					it("should log appropriately", async () => {
 						await testData.requestLogPromise
-						expect(testData.requestLog).to.have.been.calledWith({
+						expect(testData.requestLogFactory).to.have.been.calledWith({
 							statusCode: 404,
 							responseSize: 10,
 							path: "/initial",
@@ -430,7 +488,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				})
 				it("should log appropriately", async () => {
 					await testData.requestLogPromise
-					expect(testData.requestLog).to.have.been.calledWith({
+					expect(testData.requestLogFactory).to.have.been.calledWith({
 						statusCode: 200,
 						responseSize: 15,
 						path: "/other",
