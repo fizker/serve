@@ -1,0 +1,13 @@
+# Base files for any project
+Dockerfile*
+.dockerignore
+.git*
+
+# Project-specific files
+test
+node_modules
+flow-typed
+.flowconfig
+
+# Typical OS files
+.DS_Store
