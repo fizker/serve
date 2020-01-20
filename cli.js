@@ -27,23 +27,35 @@ Promise.all([
 		const o = JSON.parse(raw)
 		return assertServerSetup(o)
 	}),
-	certPath != null && keyPath != null
-		? Promise.all([
-			fs.promises.readFile(keyPath),
-			fs.promises.readFile(certPath),
-		]).then(
-			([ key, cert ]) => { return { key, cert } },
-			(e) => undefined,
-		)
-		: undefined,
+	(() => {
+		if(certPath != null && keyPath != null) {
+			return Promise.all([
+				fs.promises.readFile(keyPath)
+					.catch(e => {
+						console.log(`Could not read HTTPS key at ${keyPath}.`)
+						throw e
+					}),
+				fs.promises.readFile(certPath)
+					.catch(e => {
+						console.log(`Could not read HTTPS certificate at ${certPath}.`)
+						throw e
+					}),
+			]).then(
+				([ key, cert ]) => { return { key, cert } },
+				(e) => undefined,
+			)
+		} else {
+			console.log(`HTTPS_CERT and HTTPS_KEY env vars are missing. Skipping HTTPS setup.`)
+		}
+	})(),
 ])
 	.then(async ([ setup, httpsSetup ]) => {
 		const server = new Server(path.dirname(absSetupPath), setup, httpsSetup)
 		const { http, https } = await server.listen(port, httpsPort)
 
-		console.log(`Server running at port ${http}`)
+		console.log(`Server running at port ${http}.`)
 		if(https != null) {
-			console.log(`Server running as HTTPS on port ${https}`)
+			console.log(`Server running as HTTPS on port ${https}.`)
 		}
 
 		process.on("SIGINT", () => {
@@ -54,6 +66,6 @@ Promise.all([
 		})
 	})
 	.catch(error => {
-		console.error(error.message)
+		console.log(error.message)
 		process.exit(1)
 	})
