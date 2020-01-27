@@ -25,5 +25,4 @@ unsafe-getters-setters
 unnecessary-optional-chain
 unnecessary-invariant
 deprecated-utility
-non-array-spread
 nonstrict-import
