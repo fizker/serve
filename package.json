@@ -5,7 +5,7 @@
   "main": "index.js",
   "bin": "cli.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha test/unit/ test/integration/*/*.js"
   },
   "files": [
     "cli.js",
@@ -17,8 +17,8 @@
     "flow-bin": "^0.117.0",
     "flow-typed": "^2.6.2",
     "fzkes": "^0.15.0",
-    "mocha": "^6.2.2",
-    "node-fetch": "^2.6.0"
+    "mocha": "^8.2.1",
+    "node-fetch": "^2.6.1"
   },
   "keywords": [
     "http",
