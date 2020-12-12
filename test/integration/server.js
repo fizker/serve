@@ -12,7 +12,7 @@ const { Server } = require("../../index")
 
 let singletonServer
 
-async function loadHTTPSFiles() {
+async function loadHTTPSFiles() /*: Promise<{cert: Buffer, key: Buffer }> */ {
 	const [ cert, key ] = await Promise.all([
 		fs.promises.readFile(path.join(__dirname, "cert.pem")),
 		fs.promises.readFile(path.join(__dirname, "key.pem")),

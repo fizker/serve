@@ -1,7 +1,7 @@
 // @flow strict
 
 const http = require("http")
-// $FlowFixMe flow 0.114.0 does not know what http2 is
+// $FlowFixMe[cannot-resolve-module] flow does not know what http2 is
 const http2 = require("http2")
 const fs = require("fs")
 const path = require("path")

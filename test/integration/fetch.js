@@ -4,7 +4,7 @@ const nodeFetch = require("node-fetch").default
 const fs = require("fs")
 const path = require("path")
 const https = require("https")
-// $FlowFixMe flow 0.114.0 does not know http2 module
+// $FlowFixMe[cannot-resolve-module] flow does not know http2 module
 const http2 = require("http2")
 
 /*::

@@ -266,8 +266,9 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 							"some string": "unknown-env",
 						},
 					}
-					// $FlowFixMe
+					if(testData.fileProvider == null) throw new Error
 					testData.fileProvider
+						// $FlowFixMe[prop-missing]
 						.withComplexArgs(null, { value: "/missing-env" })
 						.returns(Promise.resolve(file))
 
@@ -437,7 +438,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				it("should only invoke the provider once", () => {
 					expect(testData.setupProvider)
 						.to.have.been
-						// $FlowFixMe flow does not know we override called()
+						// $FlowFixMe[extra-arg] flow does not know we override called()
 						.called(1)
 				})
 				it("should log appropriately", async () => {
@@ -457,7 +458,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 					it("should now have invoked the provider twice", () => {
 						expect(testData.setupProvider)
 							.to.have.been
-							// $FlowFixMe flow does not know we override called()
+							// $FlowFixMe[extra-arg] flow does not know we override called()
 							.called(2)
 					})
 					it("should log appropriately", async () => {
@@ -483,7 +484,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				it("should only invoke the provider once", () => {
 					expect(testData.setupProvider)
 						.to.have.been
-						// $FlowFixMe flow does not know we override called()
+						// $FlowFixMe[extra-arg] flow does not know we override called()
 						.called(1)
 				})
 				it("should log appropriately", async () => {

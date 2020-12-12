@@ -14,8 +14,8 @@
   ],
   "devDependencies": {
     "chai": "^4.2.0",
-    "flow-bin": "^0.117.0",
-    "flow-typed": "^2.6.2",
+    "flow-bin": "^0.140.0",
+    "flow-typed": "^3.2.1",
     "fzkes": "^0.15.0",
     "mocha": "^8.2.1",
     "node-fetch": "^2.6.1"
