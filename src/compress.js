@@ -3,7 +3,6 @@
 const zlib = require("zlib")
 const util = require("util")
 
-// $FlowFixMe[prop-missing] flow does not have support for the brotli node functions
 const brotli = util.promisify(zlib.brotliCompress)
 const gzip = util.promisify(zlib.gzip)
 const deflate = util.promisify(zlib.deflate)

@@ -11,7 +11,7 @@ const setup = require("./setup")
 chai.use(fzkes)
 
 /*::
-import { Response } from "node-fetch"
+import { Response, Headers } from "node-fetch"
 */
 
 describe(`integration/simple-web-project/test.js`, () => {
@@ -70,7 +70,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				beforeEach(async () => {
 					const { headers, status } = await http1("/file.js", testData)
 					testData.status = status
-					testData.headers = headers
+					testData.headers = getHeaders(headers)
 				})
 				it("should have status code 200", () => {
 					expect(testData.status)
@@ -102,7 +102,7 @@ for(const useHTTPS of [ false, true ]) { describe(useHTTPS ? "HTTPS" : "HTTP", (
 				beforeEach(async () => {
 					const { headers, status } = await http2("/file.js", testData)
 					testData.status = status
-					testData.headers = headers
+					testData.headers = getHeaders(headers)
 				})
 				it("should have status code 200", () => {
 					expect(testData.status)
