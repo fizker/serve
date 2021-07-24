@@ -1,4 +1,4 @@
-FROM node:erbium-alpine
+FROM node:fermium-alpine
 WORKDIR /fizker/serve
 
 COPY . .
